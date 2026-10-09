@@ -2000,6 +2000,10 @@ function renderSales(){
   const ym=ymOf(TODAY);
   const trainings=events.filter(e=>e.type==='ev-training').sort((a,b)=>a.date<b.date?1:-1);
   const trMonth=trainings.filter(e=>e.date.startsWith(ym));
+  const projects=clientList.filter(c=>c.plan==='project').sort((a,b)=>a.since<b.since?1:-1);
+  const pjMonth=projects.filter(c=>c.since===ym);
+  const pjMonthFee=pjMonth.reduce((s,c)=>s+(c.spot||0),0);
+  const pjTotal=projects.reduce((s,c)=>s+(c.spot||0),0);
   const trClientFee=clientList.filter(c=>c.plan==='training'&&c.since===ym).reduce((s,c)=>s+(c.spot||0),0);
   const trMonthFee=trMonth.reduce((s,e)=>s+(e.fee||0),0)+trClientFee;
   const trDone=trMonth.filter(e=>e.date<=dateStr(TODAY)).reduce((s,e)=>s+(e.fee||0),0);
@@ -2018,6 +2022,7 @@ function renderSales(){
     <div class="kpi-card amber"><div class="kpi-label">ARPU / 社</div><div class="kpi-value">${fmt(clientList.length?Math.round(totalMRR/clientList.length):0)}</div><div class="kpi-diff">月額平均</div></div>
     <div class="kpi-card purple"><div class="kpi-label">稼働クライアント</div><div class="kpi-value">${clientList.length}社</div><div class="kpi-diff">目標 15社</div></div>
     <div class="kpi-card green"><div class="kpi-label">当月 研修売上</div><div class="kpi-value">${fmt(trMonthFee)}</div><div class="kpi-diff">実施済 ${fmt(trDone)} · ${trMonth.length}件${trClientFee?` · 研修契約 ${fmt(trClientFee)}`:''}</div></div>
+    <div class="kpi-card purple"><div class="kpi-label">当月 プロジェクト売上</div><div class="kpi-value">${fmt(pjMonthFee)}</div><div class="kpi-diff">${pjMonth.length}件 · 累計 ${fmt(pjTotal)}</div></div>
   </div>
 
   <div class="sales-grid">
@@ -2070,7 +2075,7 @@ function renderSales(){
     <div class="card-header" style="padding:14px 18px 8px;"><span class="card-title">月次レポート</span><span class="section-count">${monthData.length}件</span></div>
     <div class="table-wrap">
       <table class="dt">
-        <thead><tr><th>月</th><th>新規獲得</th><th>解約</th><th>MRR</th><th>前月差</th><th class="num">スポット</th><th class="num">研修売上</th><th class="num">当月売上</th><th class="center">ステータス</th></tr></thead>
+        <thead><tr><th>月</th><th>新規獲得</th><th>解約</th><th>MRR</th><th>前月差</th><th class="num">プロジェクト売上</th><th class="num">研修売上</th><th class="num">当月売上</th><th class="center">ステータス</th></tr></thead>
         <tbody>
           ${monthData.map((m,i)=>{
             const prev=i>0?monthData[i-1].mrr:null;
@@ -2082,12 +2087,36 @@ function renderSales(){
               <td style="color:var(--red);">${m.churn>0?'-'+m.churn+'社':'—'}</td>
               <td style="font-family:var(--mono);font-size:11px;">${fmt(m.mrr)}</td>
               <td style="font-family:var(--mono);font-size:11px;color:${mrrDiff>0?'var(--grn)':mrrDiff<0?'var(--red)':'var(--fg3)'};">${mrrDiff!=null?(mrrDiff>0?'▲ ':'▼ ')+fmt(Math.abs(mrrDiff)):'—'}</td>
-              <td class="num" style="color:var(--fg3);">${m.spot?fmt(m.spot):'—'}</td>
+              <td class="num" style="color:#6D28D9;">${m.spot?fmt(m.spot):'—'}</td>
               <td class="num" style="color:#0F766E;">${m.training?fmt(m.training):'—'}</td>
               <td class="num">${fmt(m.revenue)}</td>
               <td class="center"><span class="pill ${isThis?'blue':'green'}">${isThis?'進行中':'確定'}</span></td>
             </tr>`;
           }).join('')}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:16px;">
+    <div class="card-header" style="padding:14px 18px 8px;"><span class="card-title">プロジェクト一覧</span>
+      <div style="display:flex;gap:6px;align-items:center;"><span class="pill purple">累計 ${fmt(pjTotal)}</span><span class="section-count">${projects.length}件</span>
+      <button class="topbar-btn primary" style="height:28px;font-size:11px;" onclick="openClientModal();document.getElementById('cl-plan').value='project';updateClientAmount(true);">＋ プロジェクトを登録</button></div>
+    </div>
+    <div class="table-wrap">
+      <table class="dt">
+        <thead><tr><th>計上月</th><th>クライアント</th><th>業種</th><th>担当</th><th>内容</th><th class="num">金額（一括）</th><th class="center">状態</th></tr></thead>
+        <tbody>
+          ${projects.length?projects.map(c=>{const st=STAFF[c.staff];const cur=c.since===ym;
+            return `<tr style="cursor:pointer;" onclick="openClientModal(${c.id})">
+              <td style="font-family:var(--mono);font-size:11px;">${c.since.replace('-','/')}</td>
+              <td style="font-weight:600;">${c.name}</td>
+              <td>${c.industry||'—'}</td>
+              <td><span style="display:inline-flex;align-items:center;gap:4px;font-size:11px;"><span class="staff-dot" style="background:${st?.color||'#999'};"></span>${st?.short||'—'}</span></td>
+              <td class="memo-cell" style="font-size:11px;color:var(--fg3);">${c.memo||'—'}</td>
+              <td class="num">${c.spot?fmt(c.spot):'—'}</td>
+              <td class="center"><span class="pill ${cur?'blue':'green'}">${cur?'当月計上':'計上済'}</span></td>
+            </tr>`;}).join(''):`<tr><td colspan="7" style="text-align:center;color:var(--fg4);padding:18px;">プロジェクトはまだ登録されていません</td></tr>`}
         </tbody>
       </table>
     </div>
