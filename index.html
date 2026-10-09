@@ -841,6 +841,9 @@ tr:hover .row-actions { opacity: 1; }
 .bottom-nav { background: rgba(255,255,255,.72) !important; backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border-top: 1px solid rgba(255,255,255,.8) !important; }
 
 
+/* KPI は幅に合わせて折り返し */
+.content .kpi-grid { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)) !important; }
+
 /* topbar の折り返し防止 */
 .content .topbar-title, .content .staff-filter, .content .btn-today, .content .cal-legend span, .content .week-label { white-space: nowrap; }
 .content .topbar-title { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
@@ -1475,7 +1478,7 @@ function renderHome(){
 
   const evBg={'ev-visit':'#DBEAFE','ev-online':'#DCFCE7','ev-chat':'#EDE9FE','ev-report':'#FEF3C7','ev-seminar':'#FFE4E6'};
   const evFg={'ev-visit':'#1E40AF','ev-online':'#166534','ev-chat':'#4C1D95','ev-report':'#92400E','ev-seminar':'#9F1239'};
-  const sorted=[...events].sort((a,b)=>a.date>b.date?-1:1).slice(0,6);
+  const sorted=events.filter(e=>e.date<=dateStr(TODAY)).sort((a,b)=>a.date!==b.date?(a.date>b.date?-1:1):b.slot-a.slot).slice(0,6);
   document.getElementById('activityList').innerHTML=sorted.map(e=>`
     <div class="activity-row">
       <div class="activity-icon" style="background:${evBg[e.type]};color:${evFg[e.type]};">${TYPE_ICON[e.type]}</div>
