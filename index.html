@@ -903,6 +903,10 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; }
 .content table.dt td, .content table.dt th { white-space: nowrap; }
 .content table.dt td.memo-cell { white-space: normal; min-width: 160px; }
 
+/* プラン別構成の金額は1行で */
+.content .plan-mrr { white-space: nowrap; min-width: 0; font-size: 11px; }
+.content .plan-name { white-space: nowrap; }
+
 /* KPI は幅に合わせて折り返し */
 .content .kpi-grid { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)) !important; }
 
