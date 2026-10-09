@@ -841,6 +841,21 @@ tr:hover .row-actions { opacity: 1; }
 .bottom-nav { background: rgba(255,255,255,.72) !important; backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border-top: 1px solid rgba(255,255,255,.8) !important; }
 
 
+
+/* 予定詳細：日時変更 */
+.det-edit { margin-top: 6px; padding: 14px; border-radius: 14px; background: rgba(99,102,241,.06); border: 1px solid rgba(99,102,241,.14); display: flex; flex-direction: column; gap: 10px; }
+.det-edit-title { font-size: 12px; font-weight: 700; color: var(--fg2); }
+.det-warn { font-size: 11px; font-weight: 600; color: #92400E; background: #FEF3C7; border-radius: 8px; padding: 6px 10px; }
+.det-save { align-self: flex-end; }
+
+/* ドラッグ＆ドロップ */
+.content .ev { touch-action: none; cursor: grab; user-select: none; -webkit-user-select: none; }
+.ev.ev-dragging { opacity: .35; }
+.ev.ev-ghost { position: fixed; left: 0; top: 0; z-index: 1000; pointer-events: none; cursor: grabbing; opacity: .92; box-shadow: 0 12px 28px rgba(67,56,202,.30); border-radius: 8px; padding: 3px 6px; font-size: 10px; overflow: hidden; border-left: 3px solid transparent; }
+body.is-dragging, body.is-dragging * { cursor: grabbing !important; }
+.content .cal-cell.drop-target { background: rgba(99,102,241,.18) !important; }
+.content .cal-cell.drop-bad { background: rgba(220,38,38,.15) !important; }
+
 /* KPI は幅に合わせて折り返し */
 .content .kpi-grid { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)) !important; }
 
@@ -1068,6 +1083,16 @@ tr:hover .row-actions { opacity: 1; }
     <div class="modal-body">
       <div id="detHeader" style="padding:12px 14px;border-radius:10px;margin-bottom:4px;"></div>
       <div id="detBody"></div>
+      <div class="det-edit">
+        <div class="det-edit-title">日時を変更</div>
+        <div class="field"><label>日付</label><div id="d-date-picker" class="date-picker-wrap"></div><input type="hidden" id="d-date"></div>
+        <div class="modal-row">
+          <div class="field"><label>開始時刻</label><select id="d-start" onchange="checkDetConflict()"></select></div>
+          <div class="field"><label>所要時間</label><select id="d-dur" onchange="checkDetConflict()"><option value="1">30分</option><option value="2">1時間</option><option value="3">1.5時間</option><option value="4">2時間</option><option value="6">3時間</option></select></div>
+        </div>
+        <div class="det-warn" id="detWarn" style="display:none;"></div>
+        <button class="mf-btn green det-save" onclick="saveEventTime()">日時を変更する</button>
+      </div>
     </div>
     <div class="modal-footer">
       <button class="mf-btn danger" onclick="deleteEvent()">この予定を削除</button>
@@ -1312,6 +1337,7 @@ function dpSelect(wrapperId, hiddenId, ds){
   buildDatePicker(wrapperId, hiddenId, ds);
   const cal=document.getElementById(wrapperId+'-cal');
   if(cal) cal.classList.remove('open');
+  if(hiddenId==='d-date') checkDetConflict();
 }
 function dpMove(wrapperId, hiddenId, dir){
   const wrap=document.getElementById(wrapperId);
@@ -1521,10 +1547,10 @@ function render(){
     days.forEach(d=>{
       const ds=dateStr(d);
       const evs=events.filter(e=>e.date===ds&&e.slot===si&&(activeStaff==='all'||e.staff===activeStaff));
-      html+=`<div class="cal-cell${si%2?' alt':''}" onclick="cellClick(event,'${ds}',${si})">`;
+      html+=`<div class="cal-cell${si%2?' alt':''}" data-date="${ds}" data-slot="${si}" onclick="cellClick(event,'${ds}',${si})">`;
       evs.forEach(e=>{
         const h=e.dur*24-4;
-        html+=`<div class="ev ${e.type}" style="top:2px;height:${h}px;" onclick="event.stopPropagation();openDetail(${e.id})">
+        html+=`<div class="ev ${e.type}" style="top:2px;height:${h}px;" onpointerdown="evPointerDown(event,${e.id})" onclick="event.stopPropagation();if(!suppressEvClick)openDetail(${e.id})">
           <div class="ev-time">${SLOTS[e.slot]}${activeStaff==='all'?' · '+STAFF[e.staff]?.short:''}${e.recur?' ↺':''}</div>
           <div class="ev-name">${e.client}</div>
         </div>`;
@@ -1645,7 +1671,131 @@ function openDetail(id){
     ${e.recur?`<div class="ev-det-row"><span class="ev-det-label">繰り返し</span><span class="pill blue" style="font-size:10px;">↺ ${recurLabel[e.recur]} · 全${seriesCount}件</span></div>`:''}`;
   const seriesBtn=document.getElementById('detSeriesBtn');
   if(seriesBtn) seriesBtn.style.display=e.seriesId?'':'none';
+  document.getElementById('d-start').innerHTML=SLOTS.map((t,i)=>`<option value="${i}">${t}</option>`).join('');
+  document.getElementById('d-start').value=e.slot;
+  const durSel=document.getElementById('d-dur');
+  if(![...durSel.options].some(o=>+o.value===e.dur)) durSel.insertAdjacentHTML('beforeend',`<option value="${e.dur}">${e.dur*30}分</option>`);
+  durSel.value=e.dur;
+  document.getElementById('d-date').value=e.date;
+  document.getElementById('detWarn').style.display='none';
   document.getElementById('detOverlay').hidden=false;
+  setTimeout(()=>buildDatePicker('d-date-picker','d-date',e.date),0);
+}
+
+// ── 予定の日時変更 ── //
+function detConflicts(){
+  const e=events.find(x=>x.id===detEventId);if(!e)return [];
+  const date=document.getElementById('d-date').value;
+  const slot=parseInt(document.getElementById('d-start').value);
+  const dur=parseInt(document.getElementById('d-dur').value);
+  return eventConflicts(e,date,slot,dur);
+}
+function checkDetConflict(){
+  const w=document.getElementById('detWarn');if(!w)return;
+  const c=detConflicts();
+  if(c.length){
+    const e=events.find(x=>x.id===detEventId);
+    w.textContent=`⚠ ${STAFF[e.staff].short}さんの「${c[0].client}」（${SLOTS[c[0].slot]}〜）と時間が重なっています`;
+    w.style.display='';
+  } else w.style.display='none';
+}
+function eventConflicts(e,date,slot,dur){
+  return events.filter(x=>x.id!==e.id&&x.staff===e.staff&&x.date===date&&x.slot<slot+dur&&slot<x.slot+x.dur);
+}
+// 予定を移動（詳細モーダル・ドラッグ共通）
+function moveEvent(e,date,slot,dur){
+  if(slot+dur>SLOTS.length){showToast('終了時刻が21:00を超えるため移動できません');return false;}
+  if(date===e.date&&slot===e.slot&&dur===e.dur) return false;
+  const hadConflict=eventConflicts(e,date,slot,dur).length>0;
+  Object.assign(e,{date,slot,dur});
+  const c=clientList.find(x=>x.name===e.client);
+  if(c){const nxt=events.filter(x=>x.client===c.name&&x.date>=dateStr(TODAY)).map(x=>x.date).sort()[0];if(nxt)c.nextVisit=nxt;}
+  if(currentPage==='schedule')render();
+  if(currentPage==='home')renderHome();
+  if(currentPage==='dashboard')renderDashboard();
+  if(currentPage==='clients')renderClients();
+  showToast(`${e.client}：${date.slice(5).replace('-','/')} ${SLOTS[slot]} に変更しました${hadConflict?'（時間重複あり）':''}`);
+  return true;
+}
+function saveEventTime(){
+  const e=events.find(x=>x.id===detEventId);if(!e)return;
+  const date=document.getElementById('d-date').value;
+  const slot=parseInt(document.getElementById('d-start').value);
+  const dur=parseInt(document.getElementById('d-dur').value);
+  if(!date||isNaN(slot))return;
+  if(date===e.date&&slot===e.slot&&dur===e.dur){showToast('日時は変更されていません');return;}
+  if(slot+dur>SLOTS.length){showToast('終了時刻が21:00を超えています');return;}
+  closeDet();
+  if(currentPage==='schedule'){const d=new Date(date+'T00:00:00');weekStart=addDays(d,-((d.getDay()+6)%7));}
+  moveEvent(e,date,slot,dur);
+}
+
+// ── ドラッグ＆ドロップ ── //
+let drag=null, suppressEvClick=false;
+function evPointerDown(ev,id){
+  if(ev.button>0) return;
+  const el=ev.currentTarget, r=el.getBoundingClientRect();
+  drag={id,el,sx:ev.clientX,sy:ev.clientY,offX:ev.clientX-r.left,offY:ev.clientY-r.top,w:r.width,h:r.height,active:false,ghost:null,target:null};
+  document.addEventListener('pointermove',evPointerMove,{passive:false});
+  document.addEventListener('pointerup',evPointerUp);
+  document.addEventListener('pointercancel',evPointerEnd);
+}
+function evPointerMove(ev){
+  if(!drag) return;
+  if(!drag.active){
+    if(Math.hypot(ev.clientX-drag.sx,ev.clientY-drag.sy)<6) return;
+    drag.active=true;
+    const g=drag.el.cloneNode(true);
+    g.classList.add('ev-ghost');g.removeAttribute('onclick');g.removeAttribute('onpointerdown');
+    Object.assign(g.style,{width:drag.w+'px',height:drag.h+'px'});
+    document.body.appendChild(g);drag.ghost=g;
+    drag.el.classList.add('ev-dragging');
+    document.body.classList.add('is-dragging');
+  }
+  ev.preventDefault();
+  const gx=ev.clientX-drag.offX, gy=ev.clientY-drag.offY;
+  drag.ghost.style.transform=`translate(${gx}px,${gy}px)`;
+  // 端に来たら自動スクロール
+  const sc=document.querySelector('#pageSchedule .cal-scroll');
+  if(sc){const r=sc.getBoundingClientRect();if(ev.clientY<r.top+40)sc.scrollTop-=12;else if(ev.clientY>r.bottom-40)sc.scrollTop+=12;}
+  // カードの上端を基準にドロップ先を決める
+  const hit=document.elementFromPoint(ev.clientX,gy+6);
+  const cell=hit&&hit.closest('.cal-cell');
+  setDropTarget(cell?{date:cell.dataset.date,slot:+cell.dataset.slot}:null);
+}
+function setDropTarget(t){
+  document.querySelectorAll('.cal-cell.drop-target,.cal-cell.drop-bad').forEach(c=>c.classList.remove('drop-target','drop-bad'));
+  drag.target=t;
+  if(!t) return;
+  const e=events.find(x=>x.id===drag.id);
+  const bad=t.slot+e.dur>SLOTS.length;
+  for(let i=t.slot;i<Math.min(t.slot+e.dur,SLOTS.length);i++){
+    const c=document.querySelector(`.cal-cell[data-date="${t.date}"][data-slot="${i}"]`);
+    if(c) c.classList.add(bad?'drop-bad':'drop-target');
+  }
+}
+function evPointerUp(){
+  const d=drag;
+  if(d&&d.active){
+    suppressEvClick=true;setTimeout(()=>suppressEvClick=false,0);
+    const e=events.find(x=>x.id===d.id);
+    evPointerEnd();
+    if(e&&d.target) moveEvent(e,d.target.date,d.target.slot,e.dur);
+    return;
+  }
+  evPointerEnd();
+}
+function evPointerEnd(){
+  document.removeEventListener('pointermove',evPointerMove);
+  document.removeEventListener('pointerup',evPointerUp);
+  document.removeEventListener('pointercancel',evPointerEnd);
+  if(drag){
+    drag.ghost&&drag.ghost.remove();
+    drag.el.classList.remove('ev-dragging');
+    document.querySelectorAll('.cal-cell.drop-target,.cal-cell.drop-bad').forEach(c=>c.classList.remove('drop-target','drop-bad'));
+  }
+  document.body.classList.remove('is-dragging');
+  drag=null;
 }
 function closeDet(){document.getElementById('detOverlay').hidden=true;detEventId=null;}
 function deleteEvent(){events=events.filter(e=>e.id!==detEventId);closeDet();if(currentPage==='schedule')render();showToast('予定を削除しました');}
