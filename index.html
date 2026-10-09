@@ -947,6 +947,12 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; }
 .target-card .tt-meta { font-size: 14px; margin-top: 10px; }
 .target-card .tt-meta.sub { font-size: 12px; margin-top: 6px; }
 .tt-note { font-size: 12px; color: var(--fg3); margin-top: 10px; }
+/* 名前・金額は途中で折り返さない（幅が足りないときは行ごと下へ） */
+.target-card .tt-head { flex-wrap: wrap; row-gap: 2px; }
+.target-card .tt-name, .target-card .tt-price { white-space: nowrap; }
+.target-card .tt-meta { flex-wrap: wrap; row-gap: 2px; }
+.target-card .tt-meta > span { white-space: nowrap; }
+.target-card .target-grid { grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
 
 /* KPI は幅に合わせて折り返し */
 .content .kpi-grid { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)) !important; }
