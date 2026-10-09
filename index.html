@@ -1467,9 +1467,16 @@ function salesStaffOptions(withNone){
 }
 function populateStaffSelects(){
   const opts = STAFF.map((s,i)=>`<option value="${i}">${s.name}</option>`).join('');
+  // 顧客の担当者（コンサル）は伴走チームのみ（チームが空なら全員）
+  const bansou=STAFF.map((s,i)=>i).filter(i=>staffTeam(STAFF[i])!=='sales');
+  const clIdx=bansou.length?bansou:STAFF.map((s,i)=>i);
+  const clOpts=clIdx.map(i=>`<option value="${i}">${STAFF[i].name}</option>`).join('');
   ['cl-staff','a-staff'].forEach(id=>{
     const el=document.getElementById(id);
-    if(el){ const v=el.value; el.innerHTML=opts; el.value=(v!==''&&+v<STAFF.length)?v:'0'; }
+    if(!el) return;
+    const v=el.value;
+    if(id==='cl-staff'){ el.innerHTML=clOpts; el.value=(v!==''&&clIdx.includes(+v))?v:String(clIdx[0]??0); }
+    else { el.innerHTML=opts; el.value=(v!==''&&+v<STAFF.length)?v:'0'; }
   });
 }
 
@@ -1979,6 +1986,8 @@ function renderClients(){
   let html='';
   STAFF.forEach((s,si)=>{
     const myC=clientList.filter(c=>c.staff===si);
+    // 営業チームは表示しない（担当顧客がいる場合のみ表示して顧客が隠れないようにする）
+    if(staffTeam(s)==='sales'&&!myC.length) return;
     const mrr=myC.reduce((sum,c)=>sum+clientMRR(c),0);
     html+=`<div class="card" style="margin-bottom:12px;">
       <div class="section-hd">
@@ -2440,7 +2449,9 @@ function openClientModal(id=null){
     document.getElementById('cl-since').value=c.since;
     document.getElementById('cl-memo').value=c.memo||'';
     setTimeout(()=>{
-      document.getElementById('cl-staff').value=c.staff;
+      const cs=document.getElementById('cl-staff');
+      if(![...cs.options].some(o=>+o.value===c.staff)&&STAFF[c.staff]) cs.insertAdjacentHTML('beforeend',`<option value="${c.staff}">${STAFF[c.staff].name}（営業チーム）</option>`);
+      cs.value=c.staff;
       buildDatePicker('cl-next-picker','cl-next',c.nextVisit||dateStr(TODAY));
     },0);
   } else {
