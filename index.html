@@ -940,7 +940,6 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; }
   <div id="pageHome" class="page-body">
     <div class="home-welcome">
       <div>
-        <div class="hw-hi">おかえりなさい 👋</div>
         <h1>AI BUDDY ダッシュボード</h1>
         <div class="hw-sub">AI伴走支援サービスの今日の状況です</div>
       </div>
@@ -1163,13 +1162,30 @@ const clientList = [
   {id:3, name:'合同会社鈴木食品',    staff:1,plan:'standard',industry:'食品製造',since:'2026-09',nextVisit:'2026-10-21',memo:'品質記録のデジタル化が進行中'},
   {id:4, name:'株式会社青山物流',    staff:1,plan:'standard',industry:'物流',    since:'2026-08',nextVisit:'2026-10-27',memo:'配車計画へのAI活用をPoC中'},
   {id:5, name:'株式会社大阪印刷',    staff:2,plan:'light',   industry:'印刷',    since:'2026-09',nextVisit:'2026-10-23',memo:'社内向けChatGPT研修を実施'},
-  {id:6, name:'有限会社名古屋電機',  staff:2,plan:'project', industry:'電気工事',since:'2026-08',nextVisit:'2026-10-15',memo:'施工報告書テンプレ作成（スポット）'},
+  {id:6, name:'有限会社名古屋電機',  staff:2,plan:'project', industry:'電気工事',since:'2026-08',spot:800000,nextVisit:'2026-10-15',memo:'施工報告書テンプレ作成（スポット）'},
   {id:7, name:'株式会社福岡農業',    staff:0,plan:'light',   industry:'農業',    since:'2026-08',nextVisit:'2026-10-13',memo:'出荷予測ダッシュボードを試行'},
   {id:8, name:'合同会社東京広告',    staff:1,plan:'light',   industry:'広告',    since:'2026-10',nextVisit:'2026-10-23',memo:'SNS投稿案の生成フローを構築'},
   {id:9, name:'株式会社仙台テック',  staff:2,plan:'standard',industry:'IT',      since:'2026-10',nextVisit:'2026-10-15',memo:'問い合わせ一次対応のAI化'},
-  {id:10,name:'合同会社広島物産',    staff:0,plan:'project', industry:'小売',    since:'2026-10',nextVisit:'2026-10-14',memo:'ECの商品説明文を一括作成'},
+  {id:10,name:'合同会社広島物産',    staff:0,plan:'project', industry:'小売',    since:'2026-10',spot:600000,nextVisit:'2026-10-14',memo:'ECの商品説明文を一括作成'},
 ];
-const MRR_HISTORY = [];
+// MRR推移・月次レポート（顧客の契約開始月から算出。spot = プロジェクト型の一括売上）
+function ymOf(d){return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;}
+function monthlyStats(){
+  const cur=ymOf(TODAY);
+  const first=clientList.map(c=>c.since).filter(Boolean).sort()[0]||cur;
+  // 契約開始の前月から当月まで（最大6ヶ月）
+  const [fy,fm]=first.split('-').map(Number);
+  let d=new Date(fy,fm-2,1);
+  const months=[];
+  while(ymOf(d)<=cur){months.push(ymOf(d));d=new Date(d.getFullYear(),d.getMonth()+1,1);}
+  return months.slice(-6).map(ym=>{
+    const active=clientList.filter(c=>c.since<=ym);
+    const mrr=active.reduce((s,c)=>s+(PLANS[c.plan]?.mrr||0),0);
+    const spot=clientList.filter(c=>c.since===ym).reduce((s,c)=>s+(c.spot||0),0);
+    return {month:ym,label:+ym.slice(5)+'月',mrr,new:clientList.filter(c=>c.since===ym).length,churn:0,revenue:mrr+spot,
+      note:ym===first?'（サービス開始）':''};
+  });
+}
 // デモ用の架空予定（slot: 0=9:00 から30分刻み / dur: 30分単位）
 let events = [
   {id:36,staff:1,client:'株式会社青山物流',type:'ev-online',date:'2026-09-28',slot:2,dur:2},
@@ -1878,7 +1894,8 @@ function renderClients(){
 // ── SALES ── //
 function renderSales(){
   const totalMRR=clientList.reduce((s,c)=>s+(PLANS[c.plan]?.mrr||0),0);
-  const prevMRR=0,diff=totalMRR-prevMRR;
+  const MRR_HISTORY=monthlyStats().map(m=>({month:m.label,mrr:m.mrr}));
+  const prevMRR=MRR_HISTORY.length>=2?MRR_HISTORY[MRR_HISTORY.length-2].mrr:0,diff=totalMRR-prevMRR;
   const staffMRR=STAFF.map((_,i)=>clientList.filter(c=>c.staff===i).reduce((s,c)=>s+(PLANS[c.plan]?.mrr||0),0));
   const maxStaffMRR=Math.max(...staffMRR);
   const planCounts={light:0,standard:0,project:0};
@@ -1907,8 +1924,7 @@ function renderSales(){
     </svg>`;
   }
 
-  const monthData=[
-  ];
+  const monthData=monthlyStats().filter(m=>m.mrr>0||m.revenue>0);
 
   document.getElementById('salesInner').innerHTML=`
   <div class="obj-header">
@@ -1925,7 +1941,7 @@ function renderSales(){
   </div>
 
   <div class="sales-grid">
-    <div class="card"><div class="card-header"><span class="card-title">MRR 推移（6ヶ月）</span></div><div class="card-body">${trendSVG}</div></div>
+    <div class="card"><div class="card-header"><span class="card-title">MRR 推移（サービス開始から）</span></div><div class="card-body">${trendSVG}</div></div>
     <div class="card"><div class="card-header"><span class="card-title">プラン別 構成</span></div>
       <div class="card-body">
         ${['standard','light','project'].map(pk=>{
@@ -1977,7 +1993,7 @@ function renderSales(){
           ${monthData.map((m,i)=>{
             const prev=i>0?monthData[i-1].mrr:null;
             const mrrDiff=prev!=null?m.mrr-prev:null;
-            const isThis=m.month==='2026-10';
+            const isThis=m.month===ymOf(TODAY);
             return `<tr style="${isThis?'background:var(--primary-bg);font-weight:600;':''}">
               <td style="font-family:var(--mono);font-size:11px;">${m.month.replace('-','年')}月${m.note||''}</td>
               <td style="color:var(--grn);font-weight:700;">${m.new>0?'+'+m.new+'社':'—'}</td>
@@ -1997,7 +2013,8 @@ function renderSales(){
 // ── DASHBOARD ── //
 function renderDashboard(){
   const totalMRR=clientList.reduce((s,c)=>s+(PLANS[c.plan]?.mrr||0),0);
-  const prevMRR=0,diff=totalMRR-prevMRR;
+  const MRR_HISTORY=monthlyStats().map(m=>({month:m.label,mrr:m.mrr}));
+  const prevMRR=MRR_HISTORY.length>=2?MRR_HISTORY[MRR_HISTORY.length-2].mrr:0,diff=totalMRR-prevMRR;
   const staffMRR=STAFF.map((_,i)=>clientList.filter(c=>c.staff===i).reduce((s,c)=>s+(PLANS[c.plan]?.mrr||0),0));
   const planCounts={light:0,standard:0,project:0};
   clientList.forEach(c=>planCounts[c.plan]=(planCounts[c.plan]||0)+1);
