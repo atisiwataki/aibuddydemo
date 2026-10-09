@@ -1079,8 +1079,9 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; }
       <div class="field" style="grid-column:1/-1;"><label>会社名 <span style="color:var(--red);">*</span></label><input type="text" id="cl-name" placeholder="株式会社〇〇"></div>
       <div class="modal-row">
         <div class="field"><label>担当者 *</label><select id="cl-staff"></select></div>
-        <div class="field"><label>プラン *</label><select id="cl-plan"><option value="light">ライト（¥200,000/月）</option><option value="standard">スタンダード（¥300,000/月）</option><option value="project">プロジェクト型（スポット）</option></select></div>
+        <div class="field"><label>プラン *</label><select id="cl-plan" onchange="updateClientAmount(true)"><option value="light">ライト（¥200,000/月）</option><option value="standard">スタンダード（¥300,000/月）</option><option value="project">プロジェクト型（一括）</option><option value="training">研修（一括）</option></select></div>
       </div>
+      <div class="field"><label id="cl-amount-label">月額（円）</label><input type="number" id="cl-amount" min="0" step="10000" placeholder="200000"><div id="cl-amount-hint" style="font-size:10px;color:var(--fg4);"></div></div>
       <div class="modal-row">
         <div class="field"><label>業種</label><input type="text" id="cl-industry" placeholder="製造業、IT など"></div>
         <div class="field"><label>契約開始月</label><input type="month" id="cl-since"></div>
@@ -1263,7 +1264,12 @@ const PLANS = {
   light:    { label:'ライト',        color:'#6366F1', bg:'#EEF0FF', mrr:200000 },
   standard: { label:'スタンダード',  color:'#4A7BF5', bg:'#EBF1FF', mrr:300000 },
   project:  { label:'プロジェクト型',color:'#8B5CF6', bg:'#EDE9FE', mrr:0 },
+  training: { label:'研修',          color:'#14B8A6', bg:'#CCFBF1', mrr:0 },
 };
+// 顧客の金額：月額プランは fee（自由入力・未入力ならプラン標準）、プロジェクト型/研修は spot（一括）
+const isMonthly=plan=>PLANS[plan]?.mrr>0;
+function clientMRR(c){return isMonthly(c.plan)?(c.fee!=null?c.fee:PLANS[c.plan].mrr):0;}
+function clientAmountLabel(c){return isMonthly(c.plan)?fmt(clientMRR(c)):(c.spot?`一括 ${fmt(c.spot)}`:'—');}
 const clientList = DEMO ? DEMO.clients : [];
 // MRR推移・月次レポート（顧客の契約開始月から算出。spot = プロジェクト型の一括売上）
 function ymOf(d){return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;}
@@ -1277,9 +1283,10 @@ function monthlyStats(){
   while(ymOf(d)<=cur){months.push(ymOf(d));d=new Date(d.getFullYear(),d.getMonth()+1,1);}
   return months.slice(-6).map(ym=>{
     const active=clientList.filter(c=>c.since<=ym);
-    const mrr=active.reduce((s,c)=>s+(PLANS[c.plan]?.mrr||0),0);
-    const spot=clientList.filter(c=>c.since===ym).reduce((s,c)=>s+(c.spot||0),0);
-    const training=events.filter(e=>e.type==='ev-training'&&e.date.startsWith(ym)).reduce((s,e)=>s+(e.fee||0),0);
+    const mrr=active.reduce((s,c)=>s+clientMRR(c),0);
+    const spot=clientList.filter(c=>c.since===ym&&c.plan!=='training').reduce((s,c)=>s+(c.spot||0),0);
+    const training=events.filter(e=>e.type==='ev-training'&&e.date.startsWith(ym)).reduce((s,e)=>s+(e.fee||0),0)
+      +clientList.filter(c=>c.since===ym&&c.plan==='training').reduce((s,c)=>s+(c.spot||0),0);
     return {month:ym,label:+ym.slice(5)+'月',mrr,new:clientList.filter(c=>c.since===ym).length,churn:0,spot,training,revenue:mrr+spot+training,
       note:ym===first?'（サービス開始）':''};
   });
@@ -1544,7 +1551,7 @@ function renderHome(){
   const hw=document.getElementById('hwDate');
   if(hw) hw.textContent=`${TODAY.getFullYear()}年${TODAY.getMonth()+1}月${TODAY.getDate()}日（${'日月火水木金土'[TODAY.getDay()]}）`;
   const cnt=clientList.length;
-  const totalMRR=clientList.reduce((s,c)=>s+(PLANS[c.plan]?.mrr||0),0);
+  const totalMRR=clientList.reduce((s,c)=>s+clientMRR(c),0);
   const pill=document.getElementById('clientCountPill2');
   if(pill) pill.textContent=cnt+'社';
   const nb=document.getElementById('nbClients');
@@ -1910,7 +1917,7 @@ function renderClients(){
   let html='';
   STAFF.forEach((s,si)=>{
     const myC=clientList.filter(c=>c.staff===si);
-    const mrr=myC.reduce((sum,c)=>sum+(PLANS[c.plan]?.mrr||0),0);
+    const mrr=myC.reduce((sum,c)=>sum+clientMRR(c),0);
     html+=`<div class="card" style="margin-bottom:12px;">
       <div class="section-hd">
         <span class="section-hd-title"><span class="staff-dot" style="background:${s.color};"></span>${s.name} <span style="color:var(--fg4);font-weight:400;font-size:11px;">${s.role}</span></span>
@@ -1921,7 +1928,7 @@ function renderClients(){
       </div>
       <div class="table-wrap">
         <table class="dt">
-          <thead><tr><th>クライアント名</th><th>プラン</th><th>業種</th><th>契約開始</th><th class="num">MRR</th><th>次回予定</th><th>メモ</th><th></th></tr></thead>
+          <thead><tr><th>クライアント名</th><th>プラン</th><th>業種</th><th>契約開始</th><th class="num">金額</th><th>次回予定</th><th>メモ</th><th></th></tr></thead>
           <tbody>`;
     myC.forEach(c=>{
       const plan=PLANS[c.plan];
@@ -1932,7 +1939,7 @@ function renderClients(){
         <td><span class="pill" style="background:${plan.bg};color:${plan.color};">${plan.label}</span></td>
         <td>${c.industry}</td>
         <td style="font-family:var(--mono);font-size:11px;">${c.since}</td>
-        <td class="num">${PLANS[c.plan]?.mrr>0?fmt(PLANS[c.plan].mrr):'—'}</td>
+        <td class="num">${clientAmountLabel(c)}</td>
         <td style="font-size:11px;color:var(--fg2);">${nextLabel}</td>
         <td class="memo-cell" style="font-size:11px;color:var(--fg3);max-width:200px;">${c.memo}</td>
         <td style="white-space:nowrap;">
@@ -1954,12 +1961,12 @@ function renderClients(){
 
 // ── SALES ── //
 function renderSales(){
-  const totalMRR=clientList.reduce((s,c)=>s+(PLANS[c.plan]?.mrr||0),0);
+  const totalMRR=clientList.reduce((s,c)=>s+clientMRR(c),0);
   const MRR_HISTORY=monthlyStats().map(m=>({month:m.label,mrr:m.mrr}));
   const prevMRR=MRR_HISTORY.length>=2?MRR_HISTORY[MRR_HISTORY.length-2].mrr:0,diff=totalMRR-prevMRR;
-  const staffMRR=STAFF.map((_,i)=>clientList.filter(c=>c.staff===i).reduce((s,c)=>s+(PLANS[c.plan]?.mrr||0),0));
+  const staffMRR=STAFF.map((_,i)=>clientList.filter(c=>c.staff===i).reduce((s,c)=>s+clientMRR(c),0));
   const maxStaffMRR=Math.max(...staffMRR);
-  const planCounts={light:0,standard:0,project:0};
+  const planCounts={light:0,standard:0,project:0,training:0};
   clientList.forEach(c=>{planCounts[c.plan]=(planCounts[c.plan]||0)+1;});
 
   const W=300,H=100,PL=8,PR=8,PT=12,PB=22;
@@ -1989,7 +1996,8 @@ function renderSales(){
   const ym=ymOf(TODAY);
   const trainings=events.filter(e=>e.type==='ev-training').sort((a,b)=>a.date<b.date?1:-1);
   const trMonth=trainings.filter(e=>e.date.startsWith(ym));
-  const trMonthFee=trMonth.reduce((s,e)=>s+(e.fee||0),0);
+  const trClientFee=clientList.filter(c=>c.plan==='training'&&c.since===ym).reduce((s,c)=>s+(c.spot||0),0);
+  const trMonthFee=trMonth.reduce((s,e)=>s+(e.fee||0),0)+trClientFee;
   const trDone=trMonth.filter(e=>e.date<=dateStr(TODAY)).reduce((s,e)=>s+(e.fee||0),0);
   const trPeople=trainings.reduce((s,e)=>s+(e.people||0),0);
 
@@ -2005,25 +2013,27 @@ function renderSales(){
     <div class="kpi-card green"><div class="kpi-label">ARR（年間換算）</div><div class="kpi-value">${fmt(totalMRR*12)}</div><div class="kpi-diff"><span class="up">▲ ${fmt(diff*12)}</span></div></div>
     <div class="kpi-card amber"><div class="kpi-label">ARPU / 社</div><div class="kpi-value">${fmt(clientList.length?Math.round(totalMRR/clientList.length):0)}</div><div class="kpi-diff">月額平均</div></div>
     <div class="kpi-card purple"><div class="kpi-label">稼働クライアント</div><div class="kpi-value">${clientList.length}社</div><div class="kpi-diff">目標 15社</div></div>
-    <div class="kpi-card green"><div class="kpi-label">当月 研修売上</div><div class="kpi-value">${fmt(trMonthFee)}</div><div class="kpi-diff">実施済 ${fmt(trDone)} · ${trMonth.length}件</div></div>
+    <div class="kpi-card green"><div class="kpi-label">当月 研修売上</div><div class="kpi-value">${fmt(trMonthFee)}</div><div class="kpi-diff">実施済 ${fmt(trDone)} · ${trMonth.length}件${trClientFee?` · 研修契約 ${fmt(trClientFee)}`:''}</div></div>
   </div>
 
   <div class="sales-grid">
     <div class="card"><div class="card-header"><span class="card-title">MRR 推移（サービス開始から）</span></div><div class="card-body">${trendSVG}</div></div>
     <div class="card"><div class="card-header"><span class="card-title">プラン別 構成</span></div>
       <div class="card-body">
-        ${['standard','light','project'].map(pk=>{
-          const p=PLANS[pk];const cnt=planCounts[pk]||0;const mrr=cnt*p.mrr;
-          const pct=totalMRR>0?Math.round(mrr/totalMRR*100):0;
+        ${['standard','light','project','training'].map(pk=>{
+          const p=PLANS[pk];const cnt=planCounts[pk]||0;const list=clientList.filter(c=>c.plan===pk);
+          const mrr=isMonthly(pk)?list.reduce((s,c)=>s+clientMRR(c),0):list.reduce((s,c)=>s+(c.spot||0),0);
+          const base=isMonthly(pk)?totalMRR:clientList.filter(c=>!isMonthly(c.plan)).reduce((s,c)=>s+(c.spot||0),0);
+          const pct=base>0?Math.round(mrr/base*100):0;
           return `<div class="plan-row">
             <div class="plan-swatch" style="background:${p.color};"></div>
             <div class="plan-name">${p.label}</div>
             <span style="font-size:11px;color:var(--fg3);width:28px;text-align:right;">${cnt}社</span>
             <div class="plan-track" style="flex:1;"><div class="plan-fill" style="width:${pct}%;background:${p.color};"></div></div>
-            <span class="plan-mrr" style="color:${p.color};">${mrr>0?fmt(mrr):'—'}</span>
+            <span class="plan-mrr" style="color:${p.color};">${mrr>0?(isMonthly(pk)?fmt(mrr)+'/月':'一括 '+fmt(mrr)):'—'}</span>
           </div>`;
         }).join('')}
-        <div style="font-size:10px;color:var(--fg4);margin-top:8px;">※ プロジェクト型はスポット契約</div>
+        <div style="font-size:10px;color:var(--fg4);margin-top:8px;">※ プロジェクト型・研修は一括契約（契約開始月の売上に計上）</div>
       </div>
     </div>
     <div class="card"><div class="card-header"><span class="card-title">担当者別 MRR</span></div>
@@ -2041,13 +2051,13 @@ function renderSales(){
     </div>
     <div class="card"><div class="card-header"><span class="card-title">クライアント別 MRR</span></div>
       <div class="card-body">
-        ${clientList.filter(c=>PLANS[c.plan]?.mrr>0).sort((a,b)=>(PLANS[b.plan]?.mrr||0)-(PLANS[a.plan]?.mrr||0)).map(c=>{
-          const mrr=PLANS[c.plan]?.mrr||0;const pct=Math.round(mrr/300000*100);
+        ${(()=>{const maxC=Math.max(1,...clientList.map(clientMRR));return clientList.filter(c=>clientMRR(c)>0).sort((a,b)=>clientMRR(b)-clientMRR(a)).map(c=>{
+          const mrr=clientMRR(c);const pct=Math.round(mrr/maxC*100);
           return `<div class="hbar-row">
             <div class="hbar-label" title="${c.name}">${c.name}</div>
             <div class="hbar-track"><div class="hbar-fill" style="width:${pct}%;background:${PLANS[c.plan]?.color};"><span>${fmt(mrr)}</span></div></div>
           </div>`;
-        }).join('')}
+        }).join('');})()}
       </div>
     </div>
   </div>
@@ -2106,11 +2116,11 @@ function renderSales(){
 
 // ── DASHBOARD ── //
 function renderDashboard(){
-  const totalMRR=clientList.reduce((s,c)=>s+(PLANS[c.plan]?.mrr||0),0);
+  const totalMRR=clientList.reduce((s,c)=>s+clientMRR(c),0);
   const MRR_HISTORY=monthlyStats().map(m=>({month:m.label,mrr:m.mrr}));
   const prevMRR=MRR_HISTORY.length>=2?MRR_HISTORY[MRR_HISTORY.length-2].mrr:0,diff=totalMRR-prevMRR;
-  const staffMRR=STAFF.map((_,i)=>clientList.filter(c=>c.staff===i).reduce((s,c)=>s+(PLANS[c.plan]?.mrr||0),0));
-  const planCounts={light:0,standard:0,project:0};
+  const staffMRR=STAFF.map((_,i)=>clientList.filter(c=>c.staff===i).reduce((s,c)=>s+clientMRR(c),0));
+  const planCounts={light:0,standard:0,project:0,training:0};
   clientList.forEach(c=>planCounts[c.plan]=(planCounts[c.plan]||0)+1);
 
   const W=500,H=140,PL=46,PR=16,PT=14,PB=28;
@@ -2141,6 +2151,7 @@ function renderDashboard(){
     {label:'スタンダード',val:planCounts.standard,color:'#4A7BF5'},
     {label:'ライト',val:planCounts.light,color:'#6366F1'},
     {label:'PJT型',val:planCounts.project,color:'#8B5CF6'},
+    {label:'研修',val:planCounts.training,color:'#14B8A6'},
   ];
   const total=clientList.length;
   let cumAngle=0;
@@ -2286,7 +2297,7 @@ function renderDashboard(){
               <td class="link-cell">${c.name}</td>
               <td><span style="display:inline-flex;align-items:center;gap:4px;font-size:11px;"><span style="width:7px;height:7px;border-radius:50%;background:${s.color};display:inline-block;"></span>${s.short}</span></td>
               <td><span class="pill" style="background:${plan.bg};color:${plan.color};">${plan.label}</span></td>
-              <td class="num">${PLANS[c.plan]?.mrr>0?fmt(PLANS[c.plan].mrr):'—'}</td>
+              <td class="num">${clientAmountLabel(c)}</td>
               <td style="font-family:var(--mono);font-size:11px;">${c.daysAgo}ヶ月</td>
               <td style="font-family:var(--mono);font-size:11px;text-align:center;">${c.evCount}件</td>
               <td style="font-size:11px;color:var(--fg3);">${nextLabel}</td>
@@ -2318,6 +2329,8 @@ function openClientModal(id=null){
     if(!c) return;
     document.getElementById('cl-name').value=c.name;
     document.getElementById('cl-plan').value=c.plan;
+    updateClientAmount(false);
+    document.getElementById('cl-amount').value=isMonthly(c.plan)?clientMRR(c):(c.spot||'');
     document.getElementById('cl-industry').value=c.industry;
     document.getElementById('cl-since').value=c.since;
     document.getElementById('cl-memo').value=c.memo||'';
@@ -2328,6 +2341,7 @@ function openClientModal(id=null){
   } else {
     document.getElementById('cl-name').value='';
     document.getElementById('cl-plan').value='light';
+    updateClientAmount(true);
     document.getElementById('cl-industry').value='';
     document.getElementById('cl-since').value=`${TODAY.getFullYear()}-${String(TODAY.getMonth()+1).padStart(2,'0')}`;
     document.getElementById('cl-memo').value='';
@@ -2337,6 +2351,13 @@ function openClientModal(id=null){
   document.getElementById('clientOverlay').hidden=false;
 }
 
+function updateClientAmount(resetValue){
+  const plan=document.getElementById('cl-plan').value, m=isMonthly(plan), el=document.getElementById('cl-amount');
+  document.getElementById('cl-amount-label').textContent=m?'月額（円）':'一括金額（円）';
+  document.getElementById('cl-amount-hint').textContent=m?`空欄ならプラン標準 ${fmt(PLANS[plan].mrr)}/月。値引き・個別価格は自由に入力`:'契約開始月の売上として計上されます';
+  el.placeholder=m?String(PLANS[plan].mrr):'500000';
+  if(resetValue) el.value=m?PLANS[plan].mrr:'';
+}
 function closeClientModal(){document.getElementById('clientOverlay').hidden=true;editClientId=null;}
 
 function saveClient(){
@@ -2348,20 +2369,25 @@ function saveClient(){
   const since=document.getElementById('cl-since').value||`${TODAY.getFullYear()}-${String(TODAY.getMonth()+1).padStart(2,'0')}`;
   const nextVisit=document.getElementById('cl-next').value||dateStr(TODAY);
   const memo=document.getElementById('cl-memo').value.trim();
+  const amtRaw=document.getElementById('cl-amount').value.trim();
+  const amt=amtRaw===''?null:Math.max(0,parseInt(amtRaw)||0);
+  // 月額プランは fee、一括プランは spot に保存
+  const money=isMonthly(plan)?{fee:amt==null?PLANS[plan].mrr:amt,spot:undefined}:{spot:amt||0,fee:undefined};
 
   if(editClientId!==null){
     const idx=clientList.findIndex(x=>x.id===editClientId);
-    if(idx>=0) clientList[idx]={...clientList[idx],name,staff,plan,industry,since,nextVisit,memo};
+    if(idx>=0) clientList[idx]={...clientList[idx],name,staff,plan,industry,since,nextVisit,memo,...money};
     closeClientModal();
     showToast(`${name} を更新しました`);
   } else {
-    clientList.push({id:nextClientId++,name,staff,plan,industry,since,nextVisit,memo});
+    clientList.push({id:nextClientId++,name,staff,plan,industry,since,nextVisit,memo,...money});
     closeClientModal();
     showToast(`${name} を登録しました`);
   }
   if(currentPage==='clients') renderClients();
   if(currentPage==='dashboard') renderDashboard();
   if(currentPage==='home') renderHome();
+  if(currentPage==='sales') renderSales();
 }
 
 // ── DELETE CLIENT ── //
@@ -2590,14 +2616,14 @@ function saveDeal(){
 function closeDeal(result){
   const d=deals.find(x=>x.id===editDealId);if(!d)return;
   Object.assign(d,readDealForm());
-  if(result==='won'&&!confirm(`${d.company} を受注にしますか？`+(d.product!=='training'?'\n顧問リストにも追加されます。':'')))return;
+  if(result==='won'&&!confirm(`${d.company} を受注にしますか？\n顧問リストにも追加されます。`))return;
   if(result==='lost'&&!confirm(`${d.company} を失注にしますか？`))return;
   d.status=result;d.closedAt=dateStr(TODAY);
   let msg=`${d.company} を${result==='won'?'受注':'失注'}にしました`;
   // 受注した顧問・プロジェクト型は顧問リストへ
-  if(result==='won'&&d.product!=='training'&&!clientList.some(c=>c.name===d.company)){
+  if(result==='won'&&!clientList.some(c=>c.name===d.company)){
     clientList.push({id:nextClientId++,name:d.company,staff:d.staff,plan:d.product,industry:d.industry||'未分類',since:ymOf(TODAY),
-      ...(d.product==='project'?{spot:d.amount}:{}),nextVisit:d.nextDate||dateStr(TODAY),memo:d.memo||''});
+      ...(isMonthly(d.product)?{fee:d.amount}:{spot:d.amount}),nextVisit:d.nextDate||dateStr(TODAY),memo:d.memo||''});
     msg+='（顧問リストに追加）';
   }
   closeDealModal();renderPipeline();showToast(msg);

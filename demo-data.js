@@ -5,7 +5,7 @@
 window.DEMO_DATA = {
   // デモは日付を固定（2026/10/9 金）
   // データの版（変えるとデモの保存データが初期化される）
-  version: 2,
+  version: 3,
   today: '2026-10-09',
 
   // 架空の担当者
@@ -27,6 +27,7 @@ window.DEMO_DATA = {
   {id:8, name:'合同会社東京広告',    staff:1,plan:'light',   industry:'広告',    since:'2026-10',nextVisit:'2026-10-23',memo:'SNS投稿案の生成フローを構築'},
   {id:9, name:'株式会社仙台テック',  staff:2,plan:'standard',industry:'IT',      since:'2026-10',nextVisit:'2026-10-15',memo:'問い合わせ一次対応のAI化'},
   {id:10,name:'合同会社広島物産',    staff:0,plan:'project', industry:'小売',    since:'2026-10',spot:600000,nextVisit:'2026-10-14',memo:'ECの商品説明文を一括作成'},
+  {id:11,name:'有限会社ふじ観光',      staff:1,plan:'training',industry:'観光・宿泊',since:'2026-10',spot:400000,nextVisit:'2026-10-27',memo:'接客スタッフ向け生成AI研修（全3回）'},
 ],
 
   // 架空の予定（slot: 0=9:00 から30分刻み / dur: 30分単位）
