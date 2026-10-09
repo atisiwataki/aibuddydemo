@@ -1201,9 +1201,12 @@ let events = [
   {id:46,staff:2,client:'株式会社大阪印刷',type:'ev-report',date:'2026-10-30',slot:4,dur:2},
   {id:35,staff:1,client:'合同会社鈴木食品',type:'ev-report',date:'2026-10-30',slot:12,dur:2},
   {id:24,staff:0,client:'株式会社田中製作所',type:'ev-report',date:'2026-10-30',slot:14,dur:2},
-  {id:64,staff:1,client:'合同会社東京広告',type:'ev-report',date:'2026-10-30',slot:14,dur:2}
+  {id:64,staff:1,client:'合同会社東京広告',type:'ev-report',date:'2026-10-30',slot:14,dur:2},
+  {id:79,staff:0,client:'株式会社福岡農業',type:'ev-visit',date:'2026-10-09',slot:2,dur:3},
+  {id:80,staff:1,client:'合同会社鈴木食品',type:'ev-online',date:'2026-10-09',slot:8,dur:2},
+  {id:81,staff:2,client:'株式会社仙台テック',type:'ev-chat',date:'2026-10-09',slot:12,dur:1}
 ];
-let nextId = 79;
+let nextId = 82;
 const TODAY = new Date(2026,9,9);
 let weekStart = new Date(TODAY); weekStart.setDate(TODAY.getDate()-((TODAY.getDay()+6)%7));
 let activeStaff = 'all';
