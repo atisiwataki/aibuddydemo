@@ -985,7 +985,7 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; }
         <div class="obj-meta">
           <div class="obj-label">Client Management</div>
           <div class="obj-name">顧問リスト</div>
-          <div class="obj-sub" id="clientsMeta">担当者別クライアント一覧 · 合計 11社</div>
+          <div class="obj-sub" id="clientsMeta">担当者別クライアント一覧 · 合計 0社</div>
         </div>
       </div>
       <div id="clientsInner"></div>
@@ -1135,39 +1135,23 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; }
   <button class="dcb-btn confirm" onclick="execDeleteClient()">削除する</button>
 </div>
 
+<script src="demo-data.js" data-demo></script>
 <script>
 // ── DATA ── //
-// デモ用の架空担当者
-let STAFF = [
-  {name:'佐藤 美咲',short:'佐藤',role:'Lead Consultant',color:'#4A7BF5',bg:'#EBF1FF'},
-  {name:'高橋 翔',  short:'高橋',role:'Consultant',     color:'#16A34A',bg:'#DCFCE7'},
-  {name:'中村 葵',  short:'中村',role:'Consultant',     color:'#D97706',bg:'#FEF3C7'},
-];
+const DEMO = window.DEMO_DATA || null;  // デモ版のみ demo-data.js が定義
+let STAFF = DEMO ? DEMO.staff : [];
 const STAFF_COLORS = [
   {color:'#4A7BF5',bg:'#EBF1FF'},{color:'#8B5CF6',bg:'#EDE9FE'},{color:'#16A34A',bg:'#DCFCE7'},
   {color:'#D97706',bg:'#FEF3C7'},{color:'#DC2626',bg:'#FEE2E2'},{color:'#EC4899',bg:'#FCE7F3'},
   {color:'#0D9488',bg:'#CCFBF1'},{color:'#EA580C',bg:'#FFEDD5'},{color:'#7C3AED',bg:'#EDE9FE'},
   {color:'#0284C7',bg:'#E0F2FE'},
 ];
-const CLIENTS = ['株式会社田中製作所','有限会社山本商事','合同会社鈴木食品','株式会社青山物流','株式会社大阪印刷','有限会社名古屋電機','株式会社福岡農業','合同会社東京広告','株式会社仙台テック','合同会社広島物産','株式会社神戸設計'];
 const PLANS = {
   light:    { label:'ライト',        color:'#6366F1', bg:'#EEF0FF', mrr:200000 },
   standard: { label:'スタンダード',  color:'#4A7BF5', bg:'#EBF1FF', mrr:300000 },
   project:  { label:'プロジェクト型',color:'#8B5CF6', bg:'#EDE9FE', mrr:0 },
 };
-// デモ用の架空顧客（staff = STAFF のindex）
-const clientList = [
-  {id:1, name:'株式会社田中製作所',  staff:0,plan:'standard',industry:'製造業',  since:'2026-10',nextVisit:'2026-10-14',memo:'生産日報のAI要約を運用中'},
-  {id:2, name:'有限会社山本商事',    staff:0,plan:'light',   industry:'卸売業',  since:'2026-08',nextVisit:'2026-10-14',memo:'見積書作成の自動化を検討'},
-  {id:3, name:'合同会社鈴木食品',    staff:1,plan:'standard',industry:'食品製造',since:'2026-09',nextVisit:'2026-10-21',memo:'品質記録のデジタル化が進行中'},
-  {id:4, name:'株式会社青山物流',    staff:1,plan:'standard',industry:'物流',    since:'2026-08',nextVisit:'2026-10-27',memo:'配車計画へのAI活用をPoC中'},
-  {id:5, name:'株式会社大阪印刷',    staff:2,plan:'light',   industry:'印刷',    since:'2026-09',nextVisit:'2026-10-23',memo:'社内向けChatGPT研修を実施'},
-  {id:6, name:'有限会社名古屋電機',  staff:2,plan:'project', industry:'電気工事',since:'2026-08',spot:800000,nextVisit:'2026-10-15',memo:'施工報告書テンプレ作成（スポット）'},
-  {id:7, name:'株式会社福岡農業',    staff:0,plan:'light',   industry:'農業',    since:'2026-08',nextVisit:'2026-10-13',memo:'出荷予測ダッシュボードを試行'},
-  {id:8, name:'合同会社東京広告',    staff:1,plan:'light',   industry:'広告',    since:'2026-10',nextVisit:'2026-10-23',memo:'SNS投稿案の生成フローを構築'},
-  {id:9, name:'株式会社仙台テック',  staff:2,plan:'standard',industry:'IT',      since:'2026-10',nextVisit:'2026-10-15',memo:'問い合わせ一次対応のAI化'},
-  {id:10,name:'合同会社広島物産',    staff:0,plan:'project', industry:'小売',    since:'2026-10',spot:600000,nextVisit:'2026-10-14',memo:'ECの商品説明文を一括作成'},
-];
+const clientList = DEMO ? DEMO.clients : [];
 // MRR推移・月次レポート（顧客の契約開始月から算出。spot = プロジェクト型の一括売上）
 function ymOf(d){return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;}
 function monthlyStats(){
@@ -1186,73 +1170,9 @@ function monthlyStats(){
       note:ym===first?'（サービス開始）':''};
   });
 }
-// デモ用の架空予定（slot: 0=9:00 から30分刻み / dur: 30分単位）
-let events = [
-  {id:36,staff:1,client:'株式会社青山物流',type:'ev-online',date:'2026-09-28',slot:2,dur:2},
-  {id:31,staff:1,client:'合同会社鈴木食品',type:'ev-visit',date:'2026-09-29',slot:14,dur:3},
-  {id:39,staff:1,client:'株式会社青山物流',type:'ev-visit',date:'2026-09-30',slot:4,dur:3},
-  {id:20,staff:0,client:'株式会社田中製作所',type:'ev-visit',date:'2026-10-01',slot:10,dur:3},
-  {id:53,staff:0,client:'株式会社福岡農業',type:'ev-visit',date:'2026-10-02',slot:2,dur:3},
-  {id:60,staff:1,client:'合同会社東京広告',type:'ev-report',date:'2026-10-02',slot:2,dur:2},
-  {id:33,staff:1,client:'合同会社鈴木食品',type:'ev-visit',date:'2026-10-02',slot:12,dur:3},
-  {id:42,staff:2,client:'株式会社大阪印刷',type:'ev-visit',date:'2026-10-02',slot:12,dur:3},
-  {id:26,staff:0,client:'有限会社山本商事',type:'ev-chat',date:'2026-10-02',slot:16,dur:1},
-  {id:67,staff:2,client:'株式会社仙台テック',type:'ev-visit',date:'2026-10-02',slot:16,dur:3},
-  {id:22,staff:0,client:'株式会社田中製作所',type:'ev-online',date:'2026-10-05',slot:0,dur:2},
-  {id:65,staff:2,client:'株式会社仙台テック',type:'ev-visit',date:'2026-10-05',slot:4,dur:3},
-  {id:47,staff:2,client:'有限会社名古屋電機',type:'ev-visit',date:'2026-10-05',slot:12,dur:3},
-  {id:32,staff:1,client:'合同会社鈴木食品',type:'ev-online',date:'2026-10-06',slot:8,dur:2},
-  {id:37,staff:1,client:'株式会社青山物流',type:'ev-visit',date:'2026-10-06',slot:10,dur:3},
-  {id:21,staff:0,client:'株式会社田中製作所',type:'ev-report',date:'2026-10-06',slot:14,dur:2},
-  {id:59,staff:1,client:'合同会社東京広告',type:'ev-online',date:'2026-10-06',slot:16,dur:2},
-  {id:48,staff:2,client:'有限会社名古屋電機',type:'ev-online',date:'2026-10-07',slot:0,dur:2},
-  {id:38,staff:1,client:'株式会社青山物流',type:'ev-report',date:'2026-10-07',slot:2,dur:2},
-  {id:73,staff:0,client:'合同会社広島物産',type:'ev-online',date:'2026-10-07',slot:8,dur:2},
-  {id:68,staff:2,client:'株式会社仙台テック',type:'ev-visit',date:'2026-10-07',slot:14,dur:3},
-  {id:52,staff:0,client:'株式会社福岡農業',type:'ev-report',date:'2026-10-08',slot:2,dur:2},
-  {id:58,staff:1,client:'合同会社東京広告',type:'ev-online',date:'2026-10-08',slot:2,dur:2},
-  {id:66,staff:2,client:'株式会社仙台テック',type:'ev-report',date:'2026-10-08',slot:4,dur:2},
-  {id:72,staff:0,client:'合同会社広島物産',type:'ev-report',date:'2026-10-08',slot:8,dur:2},
-  {id:25,staff:0,client:'有限会社山本商事',type:'ev-chat',date:'2026-10-08',slot:12,dur:1},
-  {id:43,staff:2,client:'株式会社大阪印刷',type:'ev-visit',date:'2026-10-08',slot:12,dur:3},
-  {id:54,staff:0,client:'株式会社福岡農業',type:'ev-online',date:'2026-10-13',slot:16,dur:2},
-  {id:27,staff:0,client:'有限会社山本商事',type:'ev-online',date:'2026-10-14',slot:2,dur:2},
-  {id:76,staff:0,client:'株式会社田中製作所',type:'ev-seminar',date:'2026-10-14',slot:12,dur:4},
-  {id:74,staff:0,client:'合同会社広島物産',type:'ev-visit',date:'2026-10-14',slot:16,dur:3},
-  {id:69,staff:2,client:'株式会社仙台テック',type:'ev-visit',date:'2026-10-15',slot:0,dur:3},
-  {id:49,staff:2,client:'有限会社名古屋電機',type:'ev-online',date:'2026-10-15',slot:4,dur:2},
-  {id:75,staff:0,client:'合同会社広島物産',type:'ev-visit',date:'2026-10-16',slot:2,dur:3},
-  {id:28,staff:0,client:'有限会社山本商事',type:'ev-online',date:'2026-10-16',slot:16,dur:2},
-  {id:77,staff:1,client:'合同会社鈴木食品',type:'ev-seminar',date:'2026-10-21',slot:2,dur:4},
-  {id:55,staff:0,client:'株式会社福岡農業',type:'ev-visit',date:'2026-10-22',slot:16,dur:3},
-  {id:56,staff:0,client:'株式会社福岡農業',type:'ev-online',date:'2026-10-23',slot:0,dur:2},
-  {id:44,staff:2,client:'株式会社大阪印刷',type:'ev-online',date:'2026-10-23',slot:8,dur:2},
-  {id:61,staff:1,client:'合同会社東京広告',type:'ev-visit',date:'2026-10-23',slot:12,dur:3},
-  {id:50,staff:2,client:'有限会社名古屋電機',type:'ev-visit',date:'2026-10-23',slot:16,dur:3},
-  {id:34,staff:1,client:'合同会社鈴木食品',type:'ev-visit',date:'2026-10-26',slot:4,dur:3},
-  {id:29,staff:0,client:'有限会社山本商事',type:'ev-online',date:'2026-10-26',slot:12,dur:2},
-  {id:45,staff:2,client:'株式会社大阪印刷',type:'ev-online',date:'2026-10-27',slot:2,dur:2},
-  {id:70,staff:2,client:'株式会社仙台テック',type:'ev-visit',date:'2026-10-27',slot:8,dur:3},
-  {id:40,staff:1,client:'株式会社青山物流',type:'ev-visit',date:'2026-10-27',slot:12,dur:3},
-  {id:62,staff:1,client:'合同会社東京広告',type:'ev-online',date:'2026-10-28',slot:4,dur:2},
-  {id:78,staff:2,client:'株式会社大阪印刷',type:'ev-seminar',date:'2026-10-28',slot:8,dur:4},
-  {id:51,staff:2,client:'有限会社名古屋電機',type:'ev-online',date:'2026-10-28',slot:16,dur:2},
-  {id:63,staff:1,client:'合同会社東京広告',type:'ev-online',date:'2026-10-29',slot:8,dur:2},
-  {id:23,staff:0,client:'株式会社田中製作所',type:'ev-visit',date:'2026-10-29',slot:16,dur:3},
-  {id:41,staff:1,client:'株式会社青山物流',type:'ev-report',date:'2026-10-30',slot:0,dur:2},
-  {id:57,staff:0,client:'株式会社福岡農業',type:'ev-report',date:'2026-10-30',slot:0,dur:2},
-  {id:71,staff:2,client:'株式会社仙台テック',type:'ev-report',date:'2026-10-30',slot:0,dur:2},
-  {id:30,staff:0,client:'有限会社山本商事',type:'ev-report',date:'2026-10-30',slot:2,dur:2},
-  {id:46,staff:2,client:'株式会社大阪印刷',type:'ev-report',date:'2026-10-30',slot:4,dur:2},
-  {id:35,staff:1,client:'合同会社鈴木食品',type:'ev-report',date:'2026-10-30',slot:12,dur:2},
-  {id:24,staff:0,client:'株式会社田中製作所',type:'ev-report',date:'2026-10-30',slot:14,dur:2},
-  {id:64,staff:1,client:'合同会社東京広告',type:'ev-report',date:'2026-10-30',slot:14,dur:2},
-  {id:79,staff:0,client:'株式会社福岡農業',type:'ev-visit',date:'2026-10-09',slot:2,dur:3},
-  {id:80,staff:1,client:'合同会社鈴木食品',type:'ev-online',date:'2026-10-09',slot:8,dur:2},
-  {id:81,staff:2,client:'株式会社仙台テック',type:'ev-chat',date:'2026-10-09',slot:12,dur:1}
-];
-let nextId = 82;
-const TODAY = new Date(2026,9,9);
+let events = DEMO ? DEMO.events : [];
+let nextId = DEMO ? DEMO.nextId : 1;
+const TODAY = DEMO ? new Date(DEMO.today+'T00:00:00') : (()=>{const d=new Date();d.setHours(0,0,0,0);return d;})();
 let weekStart = new Date(TODAY); weekStart.setDate(TODAY.getDate()-((TODAY.getDay()+6)%7));
 let activeStaff = 'all';
 let detEventId = null, addSlotDate = null, addSlotTime = null;
@@ -1515,7 +1435,7 @@ function renderHome(){
   if(el('homeARR')) el('homeARR').textContent=fmt(totalMRR*12);
   if(el('nbMRR')) el('nbMRR').innerHTML=fmt(totalMRR)+'<small>当月 MRR</small>';
   if(el('nbARR')) el('nbARR').innerHTML=fmt(totalMRR*12)+'<small>ARR</small>';
-  const visitCount=events.filter(e=>e.type==='ev-visit'&&e.date.startsWith('2026-10')).length;
+  const visitCount=events.filter(e=>e.type==='ev-visit'&&e.date.startsWith(ymOf(TODAY))).length;
   if(el('homeVisits')) el('homeVisits').textContent=visitCount+'件';
   if(el('homeVisitsPlan')) el('homeVisitsPlan').textContent='今月の訪問';
 
@@ -1929,14 +1849,14 @@ function renderSales(){
   document.getElementById('salesInner').innerHTML=`
   <div class="obj-header">
     <div class="obj-icon" style="background:var(--amb-bg);color:var(--amb);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="18" y="3" width="4" height="18" rx="1"/><rect x="10" y="8" width="4" height="13" rx="1"/><rect x="2" y="13" width="4" height="8" rx="1"/></svg></div>
-    <div class="obj-meta"><div class="obj-label">Revenue Management</div><div class="obj-name">売上管理</div><div class="obj-sub">2026年10月現在 · AI伴走サービス</div></div>
+    <div class="obj-meta"><div class="obj-label">Revenue Management</div><div class="obj-name">売上管理</div><div class="obj-sub">${TODAY.getFullYear()}年${TODAY.getMonth()+1}月現在 · AI伴走サービス</div></div>
     <div class="obj-badges"><span class="pill green">MRR ${fmt(totalMRR)}</span><span class="pill blue">▲ ${fmt(diff)} 前月比</span></div>
   </div>
 
   <div class="kpi-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:16px;">
     <div class="kpi-card blue"><div class="kpi-label">当月 MRR</div><div class="kpi-value" style="color:var(--primary);">${fmt(totalMRR)}</div><div class="kpi-diff"><span class="up">▲ ${fmt(diff)}</span>&nbsp;前月比</div></div>
     <div class="kpi-card green"><div class="kpi-label">ARR（年間換算）</div><div class="kpi-value">${fmt(totalMRR*12)}</div><div class="kpi-diff"><span class="up">▲ ${fmt(diff*12)}</span></div></div>
-    <div class="kpi-card amber"><div class="kpi-label">ARPU / 社</div><div class="kpi-value">${fmt(Math.round(totalMRR/clientList.length))}</div><div class="kpi-diff">月額平均</div></div>
+    <div class="kpi-card amber"><div class="kpi-label">ARPU / 社</div><div class="kpi-value">${fmt(clientList.length?Math.round(totalMRR/clientList.length):0)}</div><div class="kpi-diff">月額平均</div></div>
     <div class="kpi-card purple"><div class="kpi-label">稼働クライアント</div><div class="kpi-value">${clientList.length}社</div><div class="kpi-diff">目標 15社</div></div>
   </div>
 
@@ -2052,7 +1972,7 @@ function renderDashboard(){
   let cumAngle=0;
   const r=40,cx=60,cy=55,stroke=14;
   const arcs=planPct.map(p=>{
-    const angle=(p.val/total)*2*Math.PI;
+    const angle=total?(p.val/total)*2*Math.PI:0;
     const x1=cx+r*Math.cos(cumAngle-Math.PI/2),y1=cy+r*Math.sin(cumAngle-Math.PI/2);
     cumAngle+=angle;
     const x2=cx+r*Math.cos(cumAngle-Math.PI/2),y2=cy+r*Math.sin(cumAngle-Math.PI/2);
@@ -2089,15 +2009,15 @@ function renderDashboard(){
 
   document.getElementById('dashInner').innerHTML=`
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
-    <div><div style="font-size:20px;font-weight:700;">ダッシュボード</div><div style="font-size:12px;color:var(--fg3);margin-top:2px;">2026年10月 · AI BUDDY 事業KPI</div></div>
-    <span class="pill blue">最終更新: 10/9 09:00</span>
+    <div><div style="font-size:20px;font-weight:700;">ダッシュボード</div><div style="font-size:12px;color:var(--fg3);margin-top:2px;">${TODAY.getFullYear()}年${TODAY.getMonth()+1}月 · AI BUDDY 事業KPI</div></div>
+    <span class="pill blue">${TODAY.getMonth()+1}/${TODAY.getDate()} 時点</span>
   </div>
 
   <div class="kpi-grid" style="grid-template-columns:repeat(5,1fr);margin-bottom:16px;">
     <div class="kpi-card blue"><div class="kpi-label">MRR</div><div class="kpi-value" style="color:var(--primary);">${fmt(totalMRR)}</div><div class="kpi-diff"><span class="up">▲ ${fmt(diff)}</span> 前月比</div></div>
     <div class="kpi-card green"><div class="kpi-label">ARR</div><div class="kpi-value">${fmt(totalMRR*12)}</div><div class="kpi-diff">年間換算</div></div>
     <div class="kpi-card amber"><div class="kpi-label">稼働クライアント</div><div class="kpi-value">${clientList.length}<span style="font-size:12px;">社</span></div><div class="kpi-diff">目標 15社</div></div>
-    <div class="kpi-card purple"><div class="kpi-label">ARPU</div><div class="kpi-value">${fmt(Math.round(totalMRR/clientList.length))}</div><div class="kpi-diff">/ 社・月</div></div>
+    <div class="kpi-card purple"><div class="kpi-label">ARPU</div><div class="kpi-value">${fmt(clientList.length?Math.round(totalMRR/clientList.length):0)}</div><div class="kpi-diff">/ 社・月</div></div>
     <div class="kpi-card red"><div class="kpi-label">今週アクション</div><div class="kpi-value">${events.filter(e=>e.date>=dateStr(weekStart)&&e.date<=dateStr(addDays(weekStart,4))).length}<span style="font-size:12px;">件</span></div><div class="kpi-diff">訪問+MTG+報告</div></div>
   </div>
 
