@@ -2249,8 +2249,8 @@ function renderDashboard(){
           return `<div style="display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--border);">
             <span style="display:flex;align-items:center;gap:6px;font-weight:800;font-size:12px;color:${t.fg};"><span style="width:8px;height:8px;border-radius:50%;background:${t.color};"></span>${t.label}</span>
             <span style="font-size:11px;color:var(--fg3);">${l.length}件</span>
-            <span style="font-family:var(--mono);font-size:11px;font-weight:600;">${fmt(v)}</span></div>`;}).join('')}
-        <div style="display:flex;justify-content:space-between;margin-top:8px;font-size:11px;color:var(--fg3);"><span>加重見込み</span><strong style="font-family:var(--mono);color:var(--primary);">${fmt(Math.round(deals.filter(d=>d.status==='open').reduce((s,d)=>s+dealValue(d)*TEMPS[d.temp].rate,0)))}</strong></div>
+            <span style="font-family:var(--mono);font-size:11px;font-weight:600;"><span style="font-size:9.5px;color:var(--fg3);font-family:var(--font);font-weight:500;">年額</span> ${fmt(v)}</span></div>`;}).join('')}
+        <div style="display:flex;justify-content:space-between;margin-top:8px;font-size:11px;color:var(--fg3);"><span>加重見込み（年額）</span><strong style="font-family:var(--mono);color:var(--primary);">${fmt(Math.round(deals.filter(d=>d.status==='open').reduce((s,d)=>s+dealValue(d)*TEMPS[d.temp].rate,0)))}</strong></div>
       </div>
     </div>
     <div class="card"><div class="card-header"><span class="card-title">プラン 構成比</span></div><div class="card-body" style="padding:8px;">${donutSVG}</div></div>
@@ -2502,7 +2502,7 @@ function renderPipeline(){
     return `<div class="pipe-col" data-temp="${k}" ondragover="dealDragOver(event)" ondragleave="this.classList.remove('drag-over')" ondrop="dealDrop(event,'${k}')">
       <div class="pipe-col-hd">
         <div><div class="t"><i style="background:${t.color};"></i><span style="color:${t.fg};">${t.label}</span><span class="section-count">${list.length}</span></div><div class="sub">${t.desc}（確度${t.rate*100}%）</div></div>
-        <div class="sum">${fmt(sum)}<div class="sub">加重 ${fmt(Math.round(sum*t.rate))}</div></div>
+        <div class="sum"><span style="font-size:9.5px;color:var(--fg3);font-family:var(--font);">年額</span> ${fmt(sum)}<div class="sub">加重 ${fmt(Math.round(sum*t.rate))}</div></div>
       </div>
       ${list.map(card).join('')||`<div style="text-align:center;color:var(--fg4);font-size:11px;padding:20px 0;">商談なし</div>`}
     </div>`;
@@ -2519,8 +2519,8 @@ function renderPipeline(){
   </div>
 
   <div class="kpi-grid" style="margin-bottom:16px;">
-    <div class="kpi-card blue"><div class="kpi-label">進行中の商談</div><div class="kpi-value">${open.length}<span style="font-size:12px;">件</span></div><div class="kpi-diff">総額 ${fmt(open.reduce((s,d)=>s+dealValue(d),0))}</div></div>
-    <div class="kpi-card purple"><div class="kpi-label">加重見込み金額</div><div class="kpi-value">${fmt(Math.round(weighted))}</div><div class="kpi-diff">HOT70% / WARM40% / COOL10%</div></div>
+    <div class="kpi-card blue"><div class="kpi-label">進行中の商談</div><div class="kpi-value">${open.length}<span style="font-size:12px;">件</span></div><div class="kpi-diff">総額（年額） ${fmt(open.reduce((s,d)=>s+dealValue(d),0))}</div></div>
+    <div class="kpi-card purple"><div class="kpi-label">加重見込み金額（年額）</div><div class="kpi-value">${fmt(Math.round(weighted))}</div><div class="kpi-diff">月額商材は×12 · HOT70% / WARM40% / COOL10%</div></div>
     <div class="kpi-card green"><div class="kpi-label">今月の受注</div><div class="kpi-value">${wonM.length}<span style="font-size:12px;">件</span></div><div class="kpi-diff">${fmt(wonM.reduce((s,d)=>s+dealValue(d),0))}（年額換算）</div></div>
     <div class="kpi-card amber"><div class="kpi-label">受注率</div><div class="kpi-value">${won+lost?Math.round(won/(won+lost)*100):0}<span style="font-size:12px;">%</span></div><div class="kpi-diff">受注 ${won} / 失注 ${lost}</div></div>
     <div class="kpi-card red"><div class="kpi-label">期限切れアクション</div><div class="kpi-value" style="color:${overdue.length?'#DC2626':'inherit'} !important;">${overdue.length}<span style="font-size:12px;">件</span></div><div class="kpi-diff">次回アクション期日超過</div></div>
