@@ -2677,7 +2677,7 @@ function scheduleDeal(){
 const STORE_KEY = DEMO ? 'aibuddy-portal:demo:'+(DEMO.version||1) : 'aibuddy-portal:prod';  // デモはデータ版が変わると初期化
 let storeWarned=false, resetting=false;
 function persist(){
-  if(resetting) return;  // リセット中はページ離脱時の自動保存で書き戻さない
+  if(resetting) return;  // リセット中は書き戻さない
   try{
     localStorage.setItem(STORE_KEY, JSON.stringify({v:1,savedAt:new Date().toISOString(),staff:STAFF,clients:clientList,events,nextId,nextClientId,deals,nextDealId}));
   }catch(err){
@@ -2707,7 +2707,14 @@ function resetDemo(){
   const fn=window[name];
   window[name]=function(...args){const r=fn.apply(this,args);persist();return r;};
 });
-addEventListener('pagehide',persist);
+// ページ離脱時の自動保存はしない（別タブで登録した新しいデータを古い内容で上書きしないため。保存は各操作の直後に実行済み）
+// 別タブで保存されたら、このタブも最新データに切り替える
+addEventListener('storage',ev=>{
+  if(ev.key!==STORE_KEY||ev.newValue==null) return;
+  restore();
+  populateStaffSelects();buildSidebarStaff();
+  switchPage(currentPage);
+});
 
 // ── INIT ── //
 restore();
