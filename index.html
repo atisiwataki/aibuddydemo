@@ -910,6 +910,14 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; }
 /* 営業担当バッジ（サイドバー） */
 .sales-badge { margin-left: auto; font-size: 9px; font-weight: 700; color: #FDE68A; background: rgba(253,230,138,.15); border-radius: 4px; padding: 0 5px; line-height: 15px; }
 
+/* サイドバー：チーム見出し */
+.team-chip { display: flex; align-items: center; gap: 7px; width: 100%; margin: 10px 0 3px; padding: 5px 10px; border: none; border-radius: 8px; background: none; cursor: pointer; font-family: var(--font); font-size: 10.5px; font-weight: 700; letter-spacing: .06em; color: rgba(255,255,255,.55); text-align: left; }
+.team-chip:hover { background: rgba(255,255,255,.07); color: #fff; }
+.team-chip.active { background: rgba(255,255,255,.14); color: #fff; }
+.team-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.team-count { margin-left: auto; font-size: 9.5px; font-weight: 600; background: rgba(255,255,255,.12); border-radius: 8px; padding: 0 6px; }
+.team-empty { font-size: 10.5px; color: rgba(255,255,255,.3); padding: 2px 12px 6px; }
+
 /* KPI は幅に合わせて折り返し */
 .content .kpi-grid { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)) !important; }
 
@@ -952,7 +960,7 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; }
 
   <div class="sidebar-staff" id="sidebarStaff">
     <div class="sidebar-staff-label" style="display:flex;align-items:center;justify-content:space-between;">
-      担当者フィルター
+      担当者・チーム
       <button onclick="openStaffModal()" style="background:rgba(255,255,255,.12);border:none;color:rgba(255,255,255,.7);border-radius:5px;width:20px;height:20px;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;flex-shrink:0;" title="担当者を追加">+</button>
     </div>
     <button class="staff-chip active" id="ssc-all" onclick="setStaff('all')">
@@ -1186,7 +1194,10 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; }
         <div class="field"><label>名前 *</label><input id="sf-name" type="text" placeholder="例：鈴木 健一"></div>
         <div class="field"><label>略称 *</label><input id="sf-short" type="text" placeholder="鈴木" maxlength="4"></div>
       </div>
-      <div class="field"><label>役割</label><select id="sf-role"></select></div>
+      <div class="modal-row">
+        <div class="field"><label>役割</label><select id="sf-role" onchange="if(editStaffIdx==null)document.getElementById('sf-team').value=staffTeam({role:this.value})"></select></div>
+        <div class="field"><label>チーム</label><select id="sf-team"><option value="bansou">伴走チーム</option><option value="sales">営業チーム</option></select></div>
+      </div>
       <div class="field">
         <label>カラー</label>
         <div id="sfColorPicker" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px;"></div>
@@ -1305,7 +1316,20 @@ let deals = DEMO ? (DEMO.deals||[]) : [];
 let nextDealId = DEMO ? (DEMO.nextDealId||1) : 1;
 const TODAY = DEMO ? new Date(DEMO.today+'T00:00:00') : (()=>{const d=new Date();d.setHours(0,0,0,0);return d;})();
 let weekStart = new Date(TODAY); weekStart.setDate(TODAY.getDate()-((TODAY.getDay()+6)%7));
-let activeStaff = 'all';
+let activeStaff = 'all';  // 'all' | 担当者index | 'team:bansou' | 'team:sales'
+const TEAMS={bansou:{label:'伴走チーム',short:'伴走',color:'#14B8A6'},sales:{label:'営業チーム',short:'営業',color:'#EC4899'}};
+// チーム未設定なら役割から判定（「営業担当」のみ営業チーム、他は伴走チーム）
+function staffTeam(st){return st?.team||(/営業/.test(st?.role||'')&&!/コンサル/.test(st?.role||'')?'sales':'bansou');}
+function staffMatch(i){
+  if(activeStaff==='all') return true;
+  if(typeof activeStaff==='number') return i===activeStaff;
+  return staffTeam(STAFF[i])===String(activeStaff).slice(5);
+}
+function filterLabel(){
+  if(activeStaff==='all') return '全員';
+  if(typeof activeStaff==='number') return STAFF[activeStaff]?.name||'全員';
+  return TEAMS[String(activeStaff).slice(5)]?.label||'全員';
+}
 let detEventId = null, addSlotDate = null, addSlotTime = null;
 
 function dateStr(d){return`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;}
@@ -1438,8 +1462,8 @@ document.addEventListener('click',e=>{
 
 // ── POPULATE STAFF SELECTS ── //
 function salesStaffOptions(withNone){
-  const order=STAFF.map((s,i)=>i).sort((a,b)=>isSalesStaff(STAFF[b])-isSalesStaff(STAFF[a]));
-  return (withNone?'<option value="">—（なし）</option>':'')+order.map(i=>`<option value="${i}">${STAFF[i].name}${isSalesStaff(STAFF[i])?'（営業）':''}</option>`).join('');
+  const order=STAFF.map((s,i)=>i).sort((a,b)=>(staffTeam(STAFF[b])==='sales')-(staffTeam(STAFF[a])==='sales'));
+  return (withNone?'<option value="">—（なし）</option>':'')+order.map(i=>`<option value="${i}">${STAFF[i].name}${staffTeam(STAFF[i])==='sales'?'（営業チーム）':''}</option>`).join('');
 }
 function populateStaffSelects(){
   const opts = STAFF.map((s,i)=>`<option value="${i}">${s.name}</option>`).join('');
@@ -1464,6 +1488,8 @@ function openStaffModal(idx=null){
   const roles=[...STAFF_ROLES]; if(st&&st.role&&!roles.includes(st.role)) roles.push(st.role);  // 既存の独自役割も残す
   document.getElementById('sf-role').innerHTML=roles.map(r=>`<option>${r}</option>`).join('');
   document.getElementById('sf-role').value=st?.role||'コンサルタント';
+  document.getElementById('sf-team').value=st?staffTeam(st):(activeStaff==='team:sales'?'sales':'bansou');
+  if(!st&&activeStaff==='team:sales') document.getElementById('sf-role').value='営業担当';
   document.getElementById('sf-err').style.display='none';
   // default color = first unused
   const used=STAFF.map(s=>s.color);
@@ -1490,11 +1516,12 @@ function saveStaff(){
   const short=document.getElementById('sf-short').value.trim();
   if(!name||!short){ document.getElementById('sf-err').style.display=''; return; }
   const role=document.getElementById('sf-role').value||'コンサルタント';
+  const team=document.getElementById('sf-team').value||'bansou';
   const color=document.getElementById('sf-color').value;
   const entry=STAFF_COLORS.find(c=>c.color===color)||{color,bg:color+'22'};
   const editing=editStaffIdx!=null;
-  if(editing) Object.assign(STAFF[editStaffIdx],{name,short,role,color:entry.color,bg:entry.bg});
-  else STAFF.push({name,short,role,color:entry.color,bg:entry.bg});
+  if(editing) Object.assign(STAFF[editStaffIdx],{name,short,role,team,color:entry.color,bg:entry.bg});
+  else STAFF.push({name,short,role,team,color:entry.color,bg:entry.bg});
   closeStaffModal();
   populateStaffSelects();
   buildSidebarStaff();
@@ -1524,19 +1551,25 @@ function deleteStaff(i){
 function buildSidebarStaff(){
   const wrap=document.getElementById('sidebarStaff');
   wrap.innerHTML=`<div class="sidebar-staff-label" style="display:flex;align-items:center;justify-content:space-between;">
-      担当者フィルター
+      担当者・チーム
       <button onclick="openStaffModal()" style="background:rgba(255,255,255,.12);border:none;color:rgba(255,255,255,.7);border-radius:5px;width:20px;height:20px;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;flex-shrink:0;" title="担当者を追加">+</button>
     </div>
     <button class="staff-chip${activeStaff==='all'?' active':''}" id="ssc-all" onclick="setStaff('all')">
       <div class="staff-avatar" style="background:#6B7280;">全</div>全員表示
     </button>`+
-    STAFF.map((s,i)=>`<div style="display:flex;align-items:center;gap:4px;">
+    Object.entries(TEAMS).map(([k,t])=>{
+      const members=STAFF.map((s,i)=>({s,i})).filter(x=>staffTeam(x.s)===k);
+      const on=activeStaff==='team:'+k;
+      return `<button class="team-chip${on?' active':''}" onclick="setStaff('team:${k}')" title="${t.label}で絞り込み">
+          <span class="team-dot" style="background:${t.color};"></span>${t.label}<span class="team-count">${members.length}</span>
+        </button>`+(members.length?members.map(({s,i})=>`<div style="display:flex;align-items:center;gap:4px;">
       <button class="staff-chip${activeStaff===i?' active':''}" onclick="setStaff(${i})" style="flex:1;">
-        <div class="staff-avatar" style="background:${s.color};">${s.short[0]}</div>${s.short}${isSalesStaff(s)?'<span class="sales-badge">営業</span>':''}
+        <div class="staff-avatar" style="background:${s.color};">${s.short[0]}</div>${s.short}
       </button>
       <button onclick="openStaffModal(${i})" title="編集" style="background:none;border:none;color:rgba(255,255,255,.3);cursor:pointer;padding:2px 3px;font-size:11px;border-radius:4px;flex-shrink:0;" onmouseover="this.style.color='rgba(255,255,255,.85)'" onmouseout="this.style.color='rgba(255,255,255,.3)'">✎</button>
       <button onclick="deleteStaff(${i})" title="削除" style="background:none;border:none;color:rgba(255,255,255,.3);cursor:pointer;padding:2px 4px;font-size:12px;border-radius:4px;flex-shrink:0;" onmouseover="this.style.color='rgba(255,100,100,.8)'" onmouseout="this.style.color='rgba(255,255,255,.3)'">✕</button>
-    </div>`).join('');
+    </div>`).join(''):'<div class="team-empty">メンバーなし</div>');
+    }).join('');
 }
 
 // ── PAGE SWITCH ── //
@@ -1622,6 +1655,7 @@ function renderHome(){
 function buildStaffFilters(){
   document.getElementById('staffFiltersWrap').innerHTML=
     `<button class="staff-filter${activeStaff==='all'?' active':''}" onclick="setStaff('all')">全員</button>`+
+    Object.entries(TEAMS).map(([k,t])=>`<button class="staff-filter${activeStaff==='team:'+k?' active':''}" onclick="setStaff('team:${k}')" style="${activeStaff==='team:'+k?`background:${t.color};border-color:${t.color};`:''}">${t.short}</button>`).join('')+
     STAFF.map((s,i)=>`<button class="staff-filter${activeStaff===i?' active':''}" onclick="setStaff(${i})" style="${activeStaff===i?`background:${s.color};border-color:${s.color};`:''}">${s.short}</button>`).join('');
 }
 function setStaff(v){activeStaff=v;buildSidebarStaff();if(currentPage==='pipeline')renderPipeline();if(currentPage==='schedule'){buildStaffFilters();render();}}
@@ -1642,7 +1676,7 @@ function render(){
   const layout={};
   days.forEach(d=>{
     const ds=dateStr(d);
-    const list=events.filter(e=>e.date===ds&&(activeStaff==='all'||e.staff===activeStaff)).sort((a,b)=>a.slot-b.slot||b.dur-a.dur);
+    const list=events.filter(e=>e.date===ds&&staffMatch(e.staff)).sort((a,b)=>a.slot-b.slot||b.dur-a.dur);
     let group=[],groupEnd=-1,colEnds=[];
     const flush=()=>{group.forEach(e=>layout[e.id].cols=colEnds.length);group=[];colEnds=[];};
     list.forEach(e=>{
@@ -1658,14 +1692,14 @@ function render(){
     html+=`<div class="time-lbl">${t.endsWith(':00')?t:''}</div>`;
     days.forEach(d=>{
       const ds=dateStr(d);
-      const evs=events.filter(e=>e.date===ds&&e.slot===si&&(activeStaff==='all'||e.staff===activeStaff));
+      const evs=events.filter(e=>e.date===ds&&e.slot===si&&staffMatch(e.staff));
       html+=`<div class="cal-cell${si%2?' alt':''}" data-date="${ds}" data-slot="${si}" onclick="cellClick(event,'${ds}',${si})">`;
       evs.forEach(e=>{
         const h=e.dur*24-4;
         const L=layout[e.id]||{col:0,cols:1};
         const pos=L.cols>1?`left:calc(${L.col*100/L.cols}% + 2px);right:auto;width:calc(${100/L.cols}% - 4px);`:'';
         html+=`<div class="ev ${e.type}" style="top:2px;height:${h}px;${pos}" onpointerdown="evPointerDown(event,${e.id})" onclick="event.stopPropagation();if(!suppressEvClick)openDetail(${e.id})">
-          <div class="ev-time">${SLOTS[e.slot]}${activeStaff==='all'?' · '+STAFF[e.staff]?.short:''}${e.recur?' ↺':''}</div>
+          <div class="ev-time">${SLOTS[e.slot]}${typeof activeStaff!=='number'?' · '+STAFF[e.staff]?.short:''}${e.recur?' ↺':''}</div>
           <div class="ev-name">${e.type==='ev-training'?'<span class="ev-tag">研修</span>':''}${e.client}</div>
         </div>`;
       });
@@ -1690,7 +1724,7 @@ function openAddModal(){
   const end=addDays(TODAY,90);
   document.getElementById('a-recur-end').value=dateStr(end);
   if(addSlotTime!==null)document.getElementById('a-start').value=addSlotTime;
-  if(activeStaff!=='all')document.getElementById('a-staff').value=activeStaff;
+  if(typeof activeStaff==='number')document.getElementById('a-staff').value=activeStaff;
   document.getElementById('recurPreview').textContent='';
   if(addPreset){document.getElementById('a-type').value=addPreset.type;if(addPreset.client)document.getElementById('a-client').value=addPreset.client;if(addPreset.staff!=null)document.getElementById('a-staff').value=addPreset.staff;addPreset=null;}
   ['a-tr-title','a-tr-people','a-tr-fee'].forEach(id=>document.getElementById(id).value='');
@@ -2413,7 +2447,7 @@ function openClientModal(id=null){
     document.getElementById('cl-name').value='';
     document.getElementById('cl-plan').value='light';
     document.getElementById('cl-sales').innerHTML=salesStaffOptions(true);
-    const firstSales=STAFF.findIndex(isSalesStaff);
+    const firstSales=STAFF.findIndex(st=>staffTeam(st)==='sales');
     document.getElementById('cl-sales').value=firstSales>=0?firstSales:'';
     updateClientAmount(true);
     document.getElementById('cl-industry').value='';
@@ -2513,7 +2547,7 @@ function dealValue(d){return PRODUCTS[d.product]?.monthly?(d.amount||0)*12:(d.am
 function dealAmountLabel(d){return PRODUCTS[d.product]?.monthly?`${fmt(d.amount||0)}/月`:fmt(d.amount||0);}
 
 function renderPipeline(){
-  const mine=d=>activeStaff==='all'||d.staff===activeStaff;
+  const mine=d=>staffMatch(d.staff);
   const open=deals.filter(d=>d.status==='open'&&mine(d));
   const closed=deals.filter(d=>d.status!=='open'&&mine(d)).sort((a,b)=>(b.closedAt||'')>(a.closedAt||'')?1:-1);
   const ym=ymOf(TODAY), today=dateStr(TODAY);
@@ -2521,7 +2555,7 @@ function renderPipeline(){
   const wonM=closed.filter(d=>d.status==='won'&&(d.closedAt||'').startsWith(ym));
   const won=closed.filter(d=>d.status==='won').length, lost=closed.filter(d=>d.status==='lost').length;
   const overdue=open.filter(d=>d.nextDate&&d.nextDate<today);
-  const staffName=activeStaff==='all'?'全員':STAFF[activeStaff]?.name;
+  const staffName=filterLabel();
 
   const card=d=>{
     const st=STAFF[d.staff]; const t=TEMPS[d.temp];
@@ -2644,7 +2678,7 @@ function openDealModal(id=null){
   document.getElementById('dl-company').value=v('company','');
   document.getElementById('dl-contact').value=v('contact','');
   document.getElementById('dl-industry').value=v('industry','');
-  document.getElementById('dl-staff').value=v('staff',activeStaff!=='all'?activeStaff:Math.max(0,STAFF.findIndex(isSalesStaff)));
+  document.getElementById('dl-staff').value=v('staff',typeof activeStaff==='number'?activeStaff:Math.max(0,STAFF.findIndex(st=>staffTeam(st)==='sales')));
   document.getElementById('dl-stage').value=v('stage',0);
   document.getElementById('dl-source').value=v('source','紹介');
   document.getElementById('dl-product').value=v('product','standard');
