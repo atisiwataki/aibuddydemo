@@ -1335,12 +1335,13 @@ function closeSidebar(){
 
 // ── DATE PICKER ── //
 const DOWS=['日','月','火','水','木','金','土'];
-function buildDatePicker(wrapperId, hiddenId, initialValue=''){
+function buildDatePicker(wrapperId, hiddenId, initialValue='', view=null){
   const wrap=document.getElementById(wrapperId);
   if(!wrap) return;
   let selDate=initialValue||''; // 'YYYY-MM-DD'
   let viewYear=TODAY.getFullYear(), viewMonth=TODAY.getMonth();
   if(selDate){const d=new Date(selDate+' 00:00');viewYear=d.getFullYear();viewMonth=d.getMonth();}
+  if(view){viewYear=view.y;viewMonth=view.m;}  // 月送り時は表示月を維持
 
   function fmt(d){return d?d.replace(/-/g,'/').slice(5)+'（'+['日','月','火','水','木','金','土'][new Date(d+' 00:00').getDay()]+'）'+'　'+d.slice(0,7).replace('-','/'):'日付を選択';}
   function render(){
@@ -1419,12 +1420,13 @@ function dpMove(wrapperId, hiddenId, dir){
   let m=s.viewMonth+dir, y=s.viewYear;
   if(m<0){m=11;y--;}else if(m>11){m=0;y++;}
   s.viewMonth=m; s.viewYear=y;
-  buildDatePicker(wrapperId, hiddenId, s.selDate);
+  buildDatePicker(wrapperId, hiddenId, s.selDate, {y,m});
   const cal=document.getElementById(wrapperId+'-cal');
   if(cal){cal.style.top=savedTop;cal.style.left=savedLeft;cal.classList.add('open');}
 }
 // close picker when clicking outside
 document.addEventListener('click',e=>{
+  if(!e.target.isConnected) return;  // 月送りで作り直されたボタンのクリックは外側扱いにしない
   document.querySelectorAll('.dp-cal.open').forEach(cal=>{
     if(!cal.parentElement.contains(e.target)) cal.classList.remove('open');
   });
