@@ -1823,8 +1823,8 @@ function renderSales(){
 
   const W=300,H=100,PL=8,PR=8,PT=12,PB=22;
   let trendSVG='<div style="color:var(--fg4);font-size:12px;padding:20px 0;text-align:center;">MRR履歴データなし</div>';
-  if(MRR_HISTORY.length>=2){
-    const maxMRR=Math.max(...MRR_HISTORY.map(m=>m.mrr));
+  if(MRR_HISTORY.length>=2&&MRR_HISTORY.some(m=>m.mrr>0)){
+    const maxMRR=Math.max(...MRR_HISTORY.map(m=>m.mrr),1);
     const pts=MRR_HISTORY.map((m,i)=>{
       const x=PL+i*(W-PL-PR)/(MRR_HISTORY.length-1);
       const y=PT+(1-m.mrr/maxMRR)*(H-PT-PB);
@@ -1941,7 +1941,7 @@ function renderDashboard(){
 
   const W=500,H=140,PL=46,PR=16,PT=14,PB=28;
   let mrrSVG='<div style="color:var(--fg4);font-size:12px;padding:40px 0;text-align:center;">MRR履歴データなし</div>';
-  if(MRR_HISTORY.length>=2){
+  if(MRR_HISTORY.length>=2&&MRR_HISTORY.some(m=>m.mrr>0)){
     const maxMRR=Math.max(...MRR_HISTORY.map(m=>m.mrr),1);
     const pts=MRR_HISTORY.map((m,i)=>{
       const x=PL+i*(W-PL-PR)/(MRR_HISTORY.length-1);
