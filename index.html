@@ -233,7 +233,7 @@ html,body { height: 100%; font-family: var(--font); color: var(--fg); background
 .page-body.no-pad { padding: 0; }
 
 /* page wrapper divs must be flex containers so inner .page-body can flex:1 */
-#pageDashboard, #pageClients, #pageSales, #pageSchedule {
+#pageDashboard, #pageClients, #pageSales, #pageSchedule, #pagePipeline {
   flex: 1; display: flex; flex-direction: column; min-height: 0; overflow: hidden;
 }
 
@@ -316,7 +316,7 @@ table.dt td.link-cell:hover { text-decoration: underline; }
 .hero-stat-lbl { font-size: 10px; color: rgba(255,255,255,.6); margin-top: 3px; }
 .hero-stat-divider { width: 1px; background: rgba(255,255,255,.2); align-self: stretch; }
 
-.nav-banner-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; margin-bottom: 16px; }
+.nav-banner-grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(170px,1fr)); gap: 12px; margin-bottom: 16px; }
 .nav-banner {
   background: var(--surface);
   border-radius: 12px;
@@ -400,6 +400,8 @@ table.dt td.link-cell:hover { text-decoration: underline; }
 .ev-chat    { background:#EDE9FE; color:#4C1D95; border-left-color:#8B5CF6; }
 .ev-report  { background:#FEF3C7; color:#92400E; border-left-color:#F59E0B; }
 .ev-seminar { background:#FFE4E6; color:#9F1239; border-left-color:#F43F5E; }
+.ev-training{ background:#CCFBF1; color:#115E59; border-left-color:#14B8A6; }
+.ev-sales   { background:#E0E7FF; color:#3730A3; border-left-color:#6366F1; }
 
 .cal-legend { display: flex; gap: 14px; align-items: center; font-size: 11px; }
 .leg-dot { width: 10px; height: 10px; border-radius: 3px; }
@@ -857,6 +859,45 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; }
 .content .cal-cell.drop-target { background: rgba(99,102,241,.18) !important; }
 .content .cal-cell.drop-bad { background: rgba(220,38,38,.15) !important; }
 
+
+/* ════ 研修 ════ */
+.training-box { padding: 12px; border-radius: 12px; background: rgba(20,184,166,.08); border: 1px solid rgba(20,184,166,.25); display: flex; flex-direction: column; gap: 10px; }
+
+/* ════ 営業管理 ════ */
+.pipe-board { display: grid; grid-template-columns: repeat(3, minmax(240px, 1fr)); gap: 14px; margin-bottom: 16px; }
+.pipe-col { border-radius: 20px; padding: 12px; min-height: 160px; background: rgba(255,255,255,.42); border: 1px solid var(--glass-border); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); transition: box-shadow .15s, background .15s; }
+.pipe-col.drag-over { background: rgba(99,102,241,.10); box-shadow: inset 0 0 0 2px rgba(99,102,241,.45); }
+.pipe-col-hd { display: flex; align-items: center; justify-content: space-between; padding: 4px 6px 10px; }
+.pipe-col-hd .t { display: flex; align-items: center; gap: 8px; font-weight: 800; font-size: 14px; letter-spacing: .04em; }
+.pipe-col-hd .t i { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+.pipe-col-hd .sub { font-size: 10.5px; color: var(--fg3); font-weight: 500; letter-spacing: 0; }
+.pipe-col-hd .sum { font-family: var(--mono); font-size: 11px; font-weight: 600; color: var(--fg2); text-align: right; }
+.deal-card { background: rgba(255,255,255,.88); border: 1px solid var(--glass-border); border-radius: 14px; padding: 11px 12px; margin-bottom: 9px; cursor: pointer; box-shadow: 0 2px 10px rgba(99,102,241,.08); transition: transform .12s, box-shadow .12s; border-left: 4px solid transparent; }
+.deal-card:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(99,102,241,.16); }
+.deal-card.dragging { opacity: .4; }
+.deal-card .dc-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 6px; }
+.deal-card .dc-name { font-weight: 700; font-size: 13px; color: var(--fg); line-height: 1.3; }
+.deal-card .dc-amt { font-family: var(--mono); font-size: 11px; font-weight: 700; color: var(--fg2); white-space: nowrap; }
+.deal-card .dc-meta { font-size: 10.5px; color: var(--fg3); margin-top: 3px; }
+.deal-card .dc-stage { display: flex; gap: 3px; margin: 8px 0 6px; }
+.deal-card .dc-stage span { flex: 1; height: 4px; border-radius: 2px; background: rgba(120,120,200,.15); }
+.deal-card .dc-stage span.on { background: var(--accent-grad); }
+.deal-card .dc-foot { display: flex; justify-content: space-between; align-items: center; gap: 6px; font-size: 10.5px; }
+.deal-card .dc-next { color: var(--fg2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.deal-card .dc-next.overdue { color: #DC2626; font-weight: 700; }
+.deal-card .dc-staff { width: 20px; height: 20px; border-radius: 50%; color: #fff; font-size: 9px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.temp-picker { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; }
+.temp-picker button { border: 1.5px solid var(--border); background: #fff; border-radius: 12px; padding: 8px 6px; cursor: pointer; font-family: var(--font); display: flex; flex-direction: column; gap: 2px; align-items: center; color: var(--fg2); }
+.temp-picker button b { font-size: 13px; letter-spacing: .05em; }
+.temp-picker button small { font-size: 9.5px; color: var(--fg3); }
+.temp-picker button.on[data-t="hot"]  { border-color: #EF4444; background: #FEF2F2; color: #B91C1C; }
+.temp-picker button.on[data-t="warm"] { border-color: #F59E0B; background: #FFFBEB; color: #B45309; }
+.temp-picker button.on[data-t="cool"] { border-color: #3B82F6; background: #EFF6FF; color: #1D4ED8; }
+.pipe-funnel { display: flex; flex-direction: column; gap: 6px; }
+.pipe-funnel .row { display: grid; grid-template-columns: 88px 1fr 64px; align-items: center; gap: 8px; font-size: 11.5px; }
+.pipe-funnel .bar { height: 18px; border-radius: 6px; background: var(--accent-grad); opacity: .85; min-width: 4px; }
+@media (max-width: 960px) { .pipe-board { grid-template-columns: 1fr; } }
+
 /* KPI は幅に合わせて折り返し */
 .content .kpi-grid { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)) !important; }
 
@@ -893,6 +934,7 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; }
     <button class="nav-item"        id="nav-dashboard"  onclick="switchPage('dashboard')"> <span class="ni-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="18" y="3" width="4" height="18" rx="1"/><rect x="10" y="8" width="4" height="13" rx="1"/><rect x="2" y="13" width="4" height="8" rx="1"/></svg></span> ダッシュボード</button>
     <button class="nav-item"        id="nav-schedule"   onclick="switchPage('schedule')">  <span class="ni-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span> スケジュール</button>
     <button class="nav-item"        id="nav-clients"    onclick="switchPage('clients')">   <span class="ni-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg></span> 顧問リスト</button>
+    <button class="nav-item"        id="nav-pipeline"   onclick="switchPage('pipeline')">  <span class="ni-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z"/></svg></span> 営業管理</button>
     <button class="nav-item"        id="nav-sales"      onclick="switchPage('sales')">     <span class="ni-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg></span> 売上管理</button>
   </div>
 
@@ -927,10 +969,13 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; }
       <span style="display:flex;align-items:center;gap:4px;"><span class="leg-dot" style="background:#8B5CF6;"></span>チャット</span>
       <span style="display:flex;align-items:center;gap:4px;"><span class="leg-dot" style="background:#F59E0B;"></span>レポート</span>
       <span style="display:flex;align-items:center;gap:4px;"><span class="leg-dot" style="background:#F43F5E;"></span>説明会</span>
+      <span style="display:flex;align-items:center;gap:4px;"><span class="leg-dot" style="background:#14B8A6;"></span>研修</span>
+      <span style="display:flex;align-items:center;gap:4px;"><span class="leg-dot" style="background:#6366F1;"></span>商談</span>
     </div>
     <div style="display:flex;gap:8px;align-items:center;">
       <button class="topbar-btn secondary" id="btnNewClient" style="display:none;" onclick="openClientModal()">＋ お客様を登録</button>
       <button class="topbar-btn primary"   id="btnNew"       style="display:none;" onclick="openAddModal()">＋ 予定を追加</button>
+      <button class="topbar-btn primary"   id="btnNewDeal"   style="display:none;" onclick="openDealModal()">＋ 商談を登録</button>
       <button class="topbar-btn primary"   id="btnNewEvent2" style="display:none;" onclick="openAddModal()">＋ 予定を追加</button>
       <div class="topbar-avatar">AI</div>
     </div>
@@ -959,6 +1004,7 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; }
       <div class="nav-banner" onclick="switchPage('dashboard')"><div class="nb-icon" style="background:var(--primary-bg);color:var(--primary);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="18" y="3" width="4" height="18" rx="1"/><rect x="10" y="8" width="4" height="13" rx="1"/><rect x="2" y="13" width="4" height="8" rx="1"/></svg></div><div class="nb-title">ダッシュボード</div><div class="nb-desc">KPI・MRR推移・ヘルス</div><div class="nb-count" id="nbMRR">¥0<small>当月 MRR</small></div></div>
       <div class="nav-banner" onclick="switchPage('schedule')"> <div class="nb-icon" style="background:#EDE9FE;color:var(--pur);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div><div class="nb-title">スケジュール</div><div class="nb-desc">週次コマ割・訪問管理</div><div class="nb-count" id="nbSched">7<small>今週の予定</small></div></div>
       <div class="nav-banner" onclick="switchPage('clients')">  <div class="nb-icon" style="background:var(--grn-bg);color:var(--grn);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg></div><div class="nb-title">顧問リスト</div><div class="nb-desc">担当者別クライアント</div><div class="nb-count" id="nbClients">11<small>稼働中</small></div></div>
+      <div class="nav-banner" onclick="switchPage('pipeline')"><div class="nb-icon" style="background:#FFE4E6;color:#E11D48;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z"/></svg></div><div class="nb-title">営業管理</div><div class="nb-desc">商談パイプライン・HOT/WARM/COOL</div><div class="nb-count" id="nbDeals">0<small>HOT 0件</small></div></div>
       <div class="nav-banner" onclick="switchPage('sales')">    <div class="nb-icon" style="background:var(--amb-bg);color:var(--amb);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg></div><div class="nb-title">売上管理</div><div class="nb-desc">月次レポート・プラン</div><div class="nb-count" id="nbARR">¥0<small>ARR</small></div></div>
     </div>
 
@@ -995,6 +1041,11 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; }
     </div>
   </div>
 
+  <!-- ─── PIPELINE（営業管理）─── -->
+  <div id="pagePipeline" style="display:none;">
+    <div class="page-body" id="pipelineInner"></div>
+  </div>
+
   <!-- ─── SALES ─── -->
   <div id="pageSales" style="display:none;">
     <div class="page-body" id="salesInner"></div>
@@ -1012,6 +1063,7 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; }
   <button class="bn-item" id="bn-dashboard" onclick="switchPage('dashboard')"> <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="18" y="3" width="4" height="18" rx="1"/><rect x="10" y="8" width="4" height="13" rx="1"/><rect x="2" y="13" width="4" height="8" rx="1"/></svg>DB</button>
   <button class="bn-item" id="bn-schedule"  onclick="switchPage('schedule')">  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>予定</button>
   <button class="bn-item" id="bn-clients"   onclick="switchPage('clients')">   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>顧問</button>
+  <button class="bn-item" id="bn-pipeline"  onclick="switchPage('pipeline')">  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z"/></svg>営業</button>
   <button class="bn-item" id="bn-sales"     onclick="switchPage('sales')">     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>売上</button>
 </nav>
 
@@ -1047,9 +1099,16 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; }
     <div class="modal-body">
       <div class="modal-row">
         <div class="field"><label>担当者</label><select id="a-staff"></select></div>
-        <div class="field"><label>種別</label><select id="a-type"><option value="ev-visit">訪問</option><option value="ev-online">オンラインMTG</option><option value="ev-chat">チャット対応</option><option value="ev-report">月次レポート</option><option value="ev-seminar">説明会/セミナー</option></select></div>
+        <div class="field"><label>種別</label><select id="a-type" onchange="toggleTrainingBox()"><option value="ev-visit">訪問</option><option value="ev-online">オンラインMTG</option><option value="ev-chat">チャット対応</option><option value="ev-report">月次レポート</option><option value="ev-seminar">説明会/セミナー</option><option value="ev-training">研修</option><option value="ev-sales">商談</option></select></div>
       </div>
       <div class="field"><label>クライアント</label><select id="a-client"></select></div>
+      <div id="a-training-box" class="training-box" hidden>
+        <div class="field"><label>研修名 *</label><input id="a-tr-title" type="text" placeholder="例：生成AI 基礎研修"></div>
+        <div class="modal-row">
+          <div class="field"><label>受講人数</label><input id="a-tr-people" type="number" min="0" placeholder="10"></div>
+          <div class="field"><label>研修費（税抜・円）</label><input id="a-tr-fee" type="number" min="0" step="10000" placeholder="300000"></div>
+        </div>
+      </div>
       <div class="modal-row">
         <div class="field"><label>開始日 *</label><div id="a-date-picker" class="date-picker-wrap"></div><input type="hidden" id="a-date"></div>
         <div class="field"><label>開始時刻</label><select id="a-start"></select></div>
@@ -1129,6 +1188,53 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; }
   </div>
 </div>
 
+<!-- DEAL MODAL -->
+<div class="overlay" id="dealOverlay" hidden onclick="if(event.target===this)closeDealModal()">
+  <div class="modal" style="max-width:520px;">
+    <div class="modal-header"><span id="dealModalTitle">商談を登録</span> <button class="modal-close" onclick="closeDealModal()">✕</button></div>
+    <div class="modal-body" style="max-height:70vh;overflow-y:auto;">
+      <div class="field"><label>見込み度</label>
+        <div class="temp-picker" id="dl-temp-picker">
+          <button type="button" data-t="hot"  onclick="pickTemp('hot')"><b>HOT</b><small>1ヶ月以内に受注見込み</small></button>
+          <button type="button" data-t="warm" onclick="pickTemp('warm')"><b>WARM</b><small>3ヶ月以内に検討</small></button>
+          <button type="button" data-t="cool" onclick="pickTemp('cool')"><b>COOL</b><small>情報収集・関係構築</small></button>
+        </div>
+        <input type="hidden" id="dl-temp" value="warm">
+      </div>
+      <div class="modal-row">
+        <div class="field"><label>会社名 *</label><input id="dl-company" type="text" placeholder="例：株式会社〇〇"></div>
+        <div class="field"><label>先方担当者</label><input id="dl-contact" type="text" placeholder="例：総務部 山田様"></div>
+      </div>
+      <div class="modal-row">
+        <div class="field"><label>業種</label><input id="dl-industry" type="text" placeholder="製造業"></div>
+        <div class="field"><label>自社担当</label><select id="dl-staff"></select></div>
+      </div>
+      <div class="modal-row">
+        <div class="field"><label>商談フェーズ</label><select id="dl-stage"></select></div>
+        <div class="field"><label>流入経路</label><select id="dl-source"><option>紹介</option><option>説明会/セミナー</option><option>Web問い合わせ</option><option>展示会</option><option>既存顧客</option><option>テレアポ</option></select></div>
+      </div>
+      <div class="modal-row">
+        <div class="field"><label>提案商材</label><select id="dl-product" onchange="updateDealAmountLabel()"><option value="standard">スタンダード（月額）</option><option value="light">ライト（月額）</option><option value="project">プロジェクト型（一括）</option><option value="training">研修（一括）</option></select></div>
+        <div class="field"><label id="dl-amount-label">想定金額（円）</label><input id="dl-amount" type="number" min="0" step="10000"></div>
+      </div>
+      <div class="modal-row">
+        <div class="field"><label>受注予定月</label><input id="dl-close" type="month"></div>
+        <div class="field"><label>次回アクション期日</label><div id="dl-next-picker" class="date-picker-wrap"></div><input type="hidden" id="dl-next"></div>
+      </div>
+      <div class="field"><label>次回アクション</label><input id="dl-action" type="text" placeholder="例：見積書を送付して電話フォロー"></div>
+      <div class="field"><label>メモ</label><input id="dl-memo" type="text" placeholder="決裁者・予算感・課題など"></div>
+      <div class="field-err" id="dl-err" style="display:none;">会社名は必須です</div>
+    </div>
+    <div class="modal-footer" style="flex-wrap:wrap;">
+      <button class="mf-btn danger" id="dl-del" onclick="deleteDeal()" style="margin-right:auto;">削除</button>
+      <button class="mf-btn" id="dl-sched" onclick="scheduleDeal()">＋ 商談予定</button>
+      <button class="mf-btn" id="dl-lost" onclick="closeDeal('lost')">失注</button>
+      <button class="mf-btn green" id="dl-won" onclick="closeDeal('won')">受注</button>
+      <button class="mf-btn green" onclick="saveDeal()">保存する</button>
+    </div>
+  </div>
+</div>
+
 <div id="toast"></div>
 
 <!-- DELETE CONFIRM BAR -->
@@ -1169,12 +1275,15 @@ function monthlyStats(){
     const active=clientList.filter(c=>c.since<=ym);
     const mrr=active.reduce((s,c)=>s+(PLANS[c.plan]?.mrr||0),0);
     const spot=clientList.filter(c=>c.since===ym).reduce((s,c)=>s+(c.spot||0),0);
-    return {month:ym,label:+ym.slice(5)+'月',mrr,new:clientList.filter(c=>c.since===ym).length,churn:0,revenue:mrr+spot,
+    const training=events.filter(e=>e.type==='ev-training'&&e.date.startsWith(ym)).reduce((s,e)=>s+(e.fee||0),0);
+    return {month:ym,label:+ym.slice(5)+'月',mrr,new:clientList.filter(c=>c.since===ym).length,churn:0,spot,training,revenue:mrr+spot+training,
       note:ym===first?'（サービス開始）':''};
   });
 }
 let events = DEMO ? DEMO.events : [];
 let nextId = DEMO ? DEMO.nextId : 1;
+let deals = DEMO ? (DEMO.deals||[]) : [];
+let nextDealId = DEMO ? (DEMO.nextDealId||1) : 1;
 const TODAY = DEMO ? new Date(DEMO.today+'T00:00:00') : (()=>{const d=new Date();d.setHours(0,0,0,0);return d;})();
 let weekStart = new Date(TODAY); weekStart.setDate(TODAY.getDate()-((TODAY.getDay()+6)%7));
 let activeStaff = 'all';
@@ -1183,13 +1292,18 @@ let detEventId = null, addSlotDate = null, addSlotTime = null;
 function dateStr(d){return`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;}
 function addDays(d,n){const r=new Date(d);r.setDate(r.getDate()+n);return r;}
 const SLOTS=[];for(let h=9;h<21;h++){SLOTS.push(`${h}:00`);SLOTS.push(`${h}:30`);}
-const TYPE_LABEL={'ev-visit':'訪問','ev-online':'オンラインMTG','ev-chat':'チャット対応','ev-report':'月次レポート','ev-seminar':'説明会/セミナー'};
+const TYPE_LABEL={'ev-visit':'訪問','ev-online':'オンラインMTG','ev-chat':'チャット対応','ev-report':'月次レポート','ev-seminar':'説明会/セミナー','ev-training':'研修','ev-sales':'商談'};
+const EV_BG={'ev-visit':'#DBEAFE','ev-online':'#DCFCE7','ev-chat':'#EDE9FE','ev-report':'#FEF3C7','ev-seminar':'#FFE4E6','ev-training':'#CCFBF1','ev-sales':'#E0E7FF'};
+const EV_FG={'ev-visit':'#1E40AF','ev-online':'#166534','ev-chat':'#4C1D95','ev-report':'#92400E','ev-seminar':'#9F1239','ev-training':'#115E59','ev-sales':'#3730A3'};
+const EV_COL={'ev-visit':'#3B82F6','ev-online':'#22C55E','ev-chat':'#8B5CF6','ev-report':'#F59E0B','ev-seminar':'#F43F5E','ev-training':'#14B8A6','ev-sales':'#6366F1'};
 const _svg=(d,extra='')=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" ${extra}>${d}</svg>`;
 const TYPE_ICON={
   'ev-visit':   _svg('<rect x="2" y="7" width="20" height="15" rx="1"/><path d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2"/><line x1="12" y1="12" x2="12" y2="12.01"/><path d="M2 12h20"/>'),
   'ev-online':  _svg('<rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/>'),
   'ev-chat':    _svg('<path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>'),
   'ev-report':  _svg('<path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>'),
+  'ev-training':_svg('<path d="M22 10L12 5 2 10l10 5 10-5z"/><path d="M6 12v5c3 2 9 2 12 0v-5"/>'),
+  'ev-sales':   _svg('<path d="M20 7h-4V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2H4a1 1 0 00-1 1v11a2 2 0 002 2h14a2 2 0 002-2V8a1 1 0 00-1-1z"/><path d="M9 12l2 2 4-4"/>'),
   'ev-seminar': _svg('<path d="M12 1a3 3 0 003 3V1a3 3 0 00-6 0 3 3 0 003 3z"/><path d="M19 10a7 7 0 01-14 0"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/>'),
 };
 const fmt=n=>'¥'+n.toLocaleString('ja-JP');
@@ -1390,8 +1504,8 @@ function buildSidebarStaff(){
 let currentPage='home';
 function switchPage(page){
   currentPage=page;
-  const pages=['home','dashboard','schedule','clients','sales'];
-  const labels={'home':'ホーム','dashboard':'ダッシュボード','schedule':'スケジュール','clients':'顧問リスト','sales':'売上管理'};
+  const pages=['home','dashboard','schedule','clients','pipeline','sales'];
+  const labels={'home':'ホーム','dashboard':'ダッシュボード','schedule':'スケジュール','clients':'顧問リスト','pipeline':'営業管理','sales':'売上管理'};
   document.querySelectorAll('.nav-item').forEach(el=>{
     el.classList.toggle('active', el.id==='nav-'+page);
   });
@@ -1412,9 +1526,11 @@ function switchPage(page){
   document.getElementById('btnNew').style.display=isSched?'':'none';
   document.getElementById('btnNewClient').style.display=isClients?'':'none';
   document.getElementById('btnNewEvent2').style.display=isClients?'':'none';
+  document.getElementById('btnNewDeal').style.display=page==='pipeline'?'':'none';
   if(page==='schedule'){buildStaffFilters();render();}
   if(page==='clients') renderClients();
   if(page==='sales')   renderSales();
+  if(page==='pipeline') renderPipeline();
   if(page==='home')    renderHome();
   if(page==='dashboard') renderDashboard();
 }
@@ -1437,13 +1553,14 @@ function renderHome(){
   if(el('homeMRR')) el('homeMRR').textContent=fmt(totalMRR);
   if(el('homeARR')) el('homeARR').textContent=fmt(totalMRR*12);
   if(el('nbMRR')) el('nbMRR').innerHTML=fmt(totalMRR)+'<small>当月 MRR</small>';
+  const od=deals.filter(d=>d.status==='open');
+  if(el('nbDeals')) el('nbDeals').innerHTML=od.length+`<small>件進行中 · HOT ${od.filter(d=>d.temp==='hot').length}件</small>`;
   if(el('nbARR')) el('nbARR').innerHTML=fmt(totalMRR*12)+'<small>ARR</small>';
   const visitCount=events.filter(e=>e.type==='ev-visit'&&e.date.startsWith(ymOf(TODAY))).length;
   if(el('homeVisits')) el('homeVisits').textContent=visitCount+'件';
   if(el('homeVisitsPlan')) el('homeVisitsPlan').textContent='今月の訪問';
 
-  const evBg={'ev-visit':'#DBEAFE','ev-online':'#DCFCE7','ev-chat':'#EDE9FE','ev-report':'#FEF3C7','ev-seminar':'#FFE4E6'};
-  const evFg={'ev-visit':'#1E40AF','ev-online':'#166534','ev-chat':'#4C1D95','ev-report':'#92400E','ev-seminar':'#9F1239'};
+  const evBg=EV_BG, evFg=EV_FG;
   const sorted=events.filter(e=>e.date<=dateStr(TODAY)).sort((a,b)=>a.date!==b.date?(a.date>b.date?-1:1):b.slot-a.slot).slice(0,6);
   document.getElementById('activityList').innerHTML=sorted.map(e=>`
     <div class="activity-row">
@@ -1468,7 +1585,7 @@ function buildStaffFilters(){
     `<button class="staff-filter${activeStaff==='all'?' active':''}" onclick="setStaff('all')">全員</button>`+
     STAFF.map((s,i)=>`<button class="staff-filter${activeStaff===i?' active':''}" onclick="setStaff(${i})" style="${activeStaff===i?`background:${s.color};border-color:${s.color};`:''}">${s.short}</button>`).join('');
 }
-function setStaff(v){activeStaff=v;buildSidebarStaff();if(currentPage==='schedule'){buildStaffFilters();render();}}
+function setStaff(v){activeStaff=v;buildSidebarStaff();if(currentPage==='pipeline')renderPipeline();if(currentPage==='schedule'){buildStaffFilters();render();}}
 
 // ── SCHEDULE ── //
 function render(){
@@ -1510,7 +1627,7 @@ function render(){
         const pos=L.cols>1?`left:calc(${L.col*100/L.cols}% + 2px);right:auto;width:calc(${100/L.cols}% - 4px);`:'';
         html+=`<div class="ev ${e.type}" style="top:2px;height:${h}px;${pos}" onpointerdown="evPointerDown(event,${e.id})" onclick="event.stopPropagation();if(!suppressEvClick)openDetail(${e.id})">
           <div class="ev-time">${SLOTS[e.slot]}${activeStaff==='all'?' · '+STAFF[e.staff]?.short:''}${e.recur?' ↺':''}</div>
-          <div class="ev-name">${e.client}</div>
+          <div class="ev-name">${e.type==='ev-training'&&e.title?e.title+'｜':''}${e.client}</div>
         </div>`;
       });
       html+=`</div>`;
@@ -1525,7 +1642,7 @@ function goToday(){weekStart=new Date(TODAY);weekStart.setDate(TODAY.getDate()-(
 // ── ADD MODAL ── //
 function openAddModal(){
   populateStaffSelects();
-  const clients=[...clientList.map(c=>c.name),'説明会（WARM層）'];
+  const clients=[...clientList.map(c=>c.name),...deals.filter(d=>d.status==='open').map(d=>d.company),'説明会（WARM層）'];
   document.getElementById('a-client').innerHTML=[...new Set(clients)].map(c=>`<option>${c}</option>`).join('');
   document.getElementById('a-start').innerHTML=SLOTS.map((t,i)=>`<option value="${i}">${t}</option>`).join('');
   const initDate=addSlotDate||dateStr(TODAY);
@@ -1536,8 +1653,15 @@ function openAddModal(){
   if(addSlotTime!==null)document.getElementById('a-start').value=addSlotTime;
   if(activeStaff!=='all')document.getElementById('a-staff').value=activeStaff;
   document.getElementById('recurPreview').textContent='';
+  if(addPreset){document.getElementById('a-type').value=addPreset.type;if(addPreset.client)document.getElementById('a-client').value=addPreset.client;if(addPreset.staff!=null)document.getElementById('a-staff').value=addPreset.staff;addPreset=null;}
+  ['a-tr-title','a-tr-people','a-tr-fee'].forEach(id=>document.getElementById(id).value='');
+  toggleTrainingBox();
   document.getElementById('addOverlay').hidden=false;
   setTimeout(()=>buildDatePicker('a-date-picker','a-date',initDate),0);
+}
+let addPreset=null;
+function toggleTrainingBox(){
+  document.getElementById('a-training-box').hidden=document.getElementById('a-type').value!=='ev-training';
 }
 function closeAdd(){document.getElementById('addOverlay').hidden=true;addSlotDate=null;addSlotTime=null;}
 
@@ -1597,10 +1721,18 @@ function saveEvent(){
   const recur=document.getElementById('a-recur').value;
   const endDate=document.getElementById('a-recur-end').value;
   if(!date||!client) return;
+  const extra={};
+  if(type==='ev-training'){
+    const title=document.getElementById('a-tr-title').value.trim();
+    if(!title){showToast('研修名を入力してください');return;}
+    extra.title=title;
+    extra.people=parseInt(document.getElementById('a-tr-people').value)||0;
+    extra.fee=parseInt(document.getElementById('a-tr-fee').value)||0;
+  }
   const dates=genRecurDates(date,recur,recur==='none'?date:endDate);
   const recurLabel={'none':'','weekly':'毎週','biweekly':'隔週','monthly-dow':'毎月（曜日）','monthly-date':'毎月（日付）'};
   const seriesId=recur!=='none'?`s${nextId}`:null;
-  dates.forEach(d=>events.push({id:nextId++,staff,client,type,date:d,slot,dur,recur:recur!=='none'?recur:undefined,seriesId}));
+  dates.forEach(d=>events.push({id:nextId++,staff,client,type,date:d,slot,dur,recur:recur!=='none'?recur:undefined,seriesId,...extra}));
   closeAdd();
   if(currentPage==='schedule') render();
   if(currentPage==='dashboard') renderDashboard();
@@ -1615,8 +1747,7 @@ function openDetail(id){
   detEventId=id;
   const dp=e.date.split('-'),dObj=new Date(+dp[0],+dp[1]-1,+dp[2]);
   const dow=['日','月','火','水','木','金','土'][dObj.getDay()];
-  const tBg={'ev-visit':'#DBEAFE','ev-online':'#DCFCE7','ev-chat':'#EDE9FE','ev-report':'#FEF3C7','ev-seminar':'#FFE4E6'};
-  const tFg={'ev-visit':'#1E40AF','ev-online':'#166534','ev-chat':'#4C1D95','ev-report':'#92400E','ev-seminar':'#9F1239'};
+  const tBg=EV_BG, tFg=EV_FG;
   document.getElementById('detHeader').style.background=tBg[e.type];
   document.getElementById('detHeader').innerHTML=`<div style="font-size:10px;font-weight:700;color:${tFg[e.type]};">${TYPE_LABEL[e.type]}</div><div style="font-size:16px;font-weight:700;color:var(--fg);margin-top:2px;">${e.client}</div>`;
   const endTime=SLOTS[Math.min(e.slot+e.dur,SLOTS.length-1)]||'21:00';
@@ -1624,6 +1755,9 @@ function openDetail(id){
   const seriesCount=e.seriesId?events.filter(x=>x.seriesId===e.seriesId).length:0;
   document.getElementById('detBody').innerHTML=`
     <div class="ev-det-row"><span class="ev-det-label">日時</span><span>${dp[1]}月${dp[2]}日（${dow}）${SLOTS[e.slot]} – ${endTime}</span></div>
+    ${e.type==='ev-training'?`<div class="ev-det-row"><span class="ev-det-label">研修名</span><span style="font-weight:600;">${e.title||'—'}</span></div>
+    <div class="ev-det-row"><span class="ev-det-label">受講人数</span><span>${e.people?e.people+'名':'—'}</span></div>
+    <div class="ev-det-row"><span class="ev-det-label">研修費</span><span style="font-family:var(--mono);font-weight:600;">${e.fee?fmt(e.fee):'—'}</span></div>`:''}
     <div class="ev-det-row"><span class="ev-det-label">担当者</span><span style="font-weight:600;color:${STAFF[e.staff].color};">${STAFF[e.staff].name}</span></div>
     <div class="ev-det-row"><span class="ev-det-label">役割</span><span style="color:var(--fg3);">${STAFF[e.staff].role}</span></div>
     ${e.recur?`<div class="ev-det-row"><span class="ev-det-label">繰り返し</span><span class="pill blue" style="font-size:10px;">↺ ${recurLabel[e.recur]} · 全${seriesCount}件</span></div>`:''}`;
@@ -1848,6 +1982,12 @@ function renderSales(){
   }
 
   const monthData=monthlyStats().filter(m=>m.mrr>0||m.revenue>0);
+  const ym=ymOf(TODAY);
+  const trainings=events.filter(e=>e.type==='ev-training').sort((a,b)=>a.date<b.date?1:-1);
+  const trMonth=trainings.filter(e=>e.date.startsWith(ym));
+  const trMonthFee=trMonth.reduce((s,e)=>s+(e.fee||0),0);
+  const trDone=trMonth.filter(e=>e.date<=dateStr(TODAY)).reduce((s,e)=>s+(e.fee||0),0);
+  const trPeople=trainings.reduce((s,e)=>s+(e.people||0),0);
 
   document.getElementById('salesInner').innerHTML=`
   <div class="obj-header">
@@ -1861,6 +2001,7 @@ function renderSales(){
     <div class="kpi-card green"><div class="kpi-label">ARR（年間換算）</div><div class="kpi-value">${fmt(totalMRR*12)}</div><div class="kpi-diff"><span class="up">▲ ${fmt(diff*12)}</span></div></div>
     <div class="kpi-card amber"><div class="kpi-label">ARPU / 社</div><div class="kpi-value">${fmt(clientList.length?Math.round(totalMRR/clientList.length):0)}</div><div class="kpi-diff">月額平均</div></div>
     <div class="kpi-card purple"><div class="kpi-label">稼働クライアント</div><div class="kpi-value">${clientList.length}社</div><div class="kpi-diff">目標 15社</div></div>
+    <div class="kpi-card green"><div class="kpi-label">当月 研修売上</div><div class="kpi-value">${fmt(trMonthFee)}</div><div class="kpi-diff">実施済 ${fmt(trDone)} · ${trMonth.length}件</div></div>
   </div>
 
   <div class="sales-grid">
@@ -1911,7 +2052,7 @@ function renderSales(){
     <div class="card-header" style="padding:14px 18px 8px;"><span class="card-title">月次レポート</span><span class="section-count">${monthData.length}件</span></div>
     <div class="table-wrap">
       <table class="dt">
-        <thead><tr><th>月</th><th>新規獲得</th><th>解約</th><th>MRR</th><th>前月差</th><th class="num">当月売上</th><th class="center">ステータス</th></tr></thead>
+        <thead><tr><th>月</th><th>新規獲得</th><th>解約</th><th>MRR</th><th>前月差</th><th class="num">スポット</th><th class="num">研修売上</th><th class="num">当月売上</th><th class="center">ステータス</th></tr></thead>
         <tbody>
           ${monthData.map((m,i)=>{
             const prev=i>0?monthData[i-1].mrr:null;
@@ -1923,10 +2064,36 @@ function renderSales(){
               <td style="color:var(--red);">${m.churn>0?'-'+m.churn+'社':'—'}</td>
               <td style="font-family:var(--mono);font-size:11px;">${fmt(m.mrr)}</td>
               <td style="font-family:var(--mono);font-size:11px;color:${mrrDiff>0?'var(--grn)':mrrDiff<0?'var(--red)':'var(--fg3)'};">${mrrDiff!=null?(mrrDiff>0?'▲ ':'▼ ')+fmt(Math.abs(mrrDiff)):'—'}</td>
+              <td class="num" style="color:var(--fg3);">${m.spot?fmt(m.spot):'—'}</td>
+              <td class="num" style="color:#0F766E;">${m.training?fmt(m.training):'—'}</td>
               <td class="num">${fmt(m.revenue)}</td>
               <td class="center"><span class="pill ${isThis?'blue':'green'}">${isThis?'進行中':'確定'}</span></td>
             </tr>`;
           }).join('')}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:16px;">
+    <div class="card-header" style="padding:14px 18px 8px;"><span class="card-title">研修一覧</span>
+      <div style="display:flex;gap:6px;align-items:center;"><span class="pill" style="background:#CCFBF1;color:#115E59;">累計受講 ${trPeople}名</span><span class="section-count">${trainings.length}件</span>
+      <button class="topbar-btn primary" style="height:28px;font-size:11px;" onclick="addPreset={type:'ev-training'};openAddModal()">＋ 研修を登録</button></div>
+    </div>
+    <div class="table-wrap">
+      <table class="dt">
+        <thead><tr><th>実施日</th><th>クライアント</th><th>研修名</th><th>受講人数</th><th>担当</th><th class="num">研修費</th><th class="center">状態</th></tr></thead>
+        <tbody>
+          ${trainings.length?trainings.map(e=>{const done=e.date<=dateStr(TODAY);const st=STAFF[e.staff];
+            return `<tr style="cursor:pointer;" onclick="openDetail(${e.id})">
+              <td style="font-family:var(--mono);font-size:11px;">${e.date.slice(5).replace('-','/')} ${SLOTS[e.slot]}</td>
+              <td>${e.client}</td>
+              <td style="font-weight:600;">${e.title||'—'}</td>
+              <td>${e.people?e.people+'名':'—'}</td>
+              <td><span style="display:inline-flex;align-items:center;gap:4px;font-size:11px;"><span class="staff-dot" style="background:${st?.color||'#999'};"></span>${st?.short||'—'}</span></td>
+              <td class="num">${e.fee?fmt(e.fee):'—'}</td>
+              <td class="center"><span class="pill ${done?'green':'blue'}">${done?'実施済':'予定'}</span></td>
+            </tr>`;}).join(''):`<tr><td colspan="7" style="text-align:center;color:var(--fg4);padding:18px;">研修はまだ登録されていません</td></tr>`}
         </tbody>
       </table>
     </div>
@@ -1996,7 +2163,7 @@ function renderDashboard(){
 
   const wEnd=dateStr(addDays(weekStart,4));
   const wStart=dateStr(weekStart);
-  const evCols={'ev-visit':'#3B82F6','ev-online':'#22C55E','ev-chat':'#8B5CF6','ev-report':'#F59E0B','ev-seminar':'#F43F5E'};
+  const evCols=EV_COL;
   const staffActivity=STAFF.map((_,i)=>{
     const wkEvs=events.filter(e=>e.staff===i&&e.date>=wStart&&e.date<=wEnd);
     const byType={};
@@ -2028,6 +2195,16 @@ function renderDashboard(){
 
   <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-bottom:12px;">
     <div class="card" style="grid-column:span 2 / auto;min-width:0;"><div class="card-header"><span class="card-title">MRR 推移</span><span style="font-family:var(--mono);font-size:11px;color:var(--primary);">${fmt(totalMRR)}</span></div><div class="card-body">${mrrSVG}</div></div>
+    <div class="card"><div class="card-header"><span class="card-title">営業パイプライン</span><span class="link-cell" style="font-size:11px;cursor:pointer;color:var(--primary);font-weight:600;" onclick="switchPage('pipeline')">詳細 ›</span></div>
+      <div class="card-body">
+        ${['hot','warm','cool'].map(k=>{const t=TEMPS[k];const l=deals.filter(d=>d.status==='open'&&d.temp===k);const v=l.reduce((s,d)=>s+dealValue(d),0);
+          return `<div style="display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--border);">
+            <span style="display:flex;align-items:center;gap:6px;font-weight:800;font-size:12px;color:${t.fg};"><span style="width:8px;height:8px;border-radius:50%;background:${t.color};"></span>${t.label}</span>
+            <span style="font-size:11px;color:var(--fg3);">${l.length}件</span>
+            <span style="font-family:var(--mono);font-size:11px;font-weight:600;">${fmt(v)}</span></div>`;}).join('')}
+        <div style="display:flex;justify-content:space-between;margin-top:8px;font-size:11px;color:var(--fg3);"><span>加重見込み</span><strong style="font-family:var(--mono);color:var(--primary);">${fmt(Math.round(deals.filter(d=>d.status==='open').reduce((s,d)=>s+dealValue(d)*TEMPS[d.temp].rate,0)))}</strong></div>
+      </div>
+    </div>
     <div class="card"><div class="card-header"><span class="card-title">プラン 構成比</span></div><div class="card-body" style="padding:8px;">${donutSVG}</div></div>
     <div class="card"><div class="card-header"><span class="card-title">担当者別 MRR</span></div>
       <div class="card-body">
@@ -2215,13 +2392,231 @@ function showToast(msg){
   setTimeout(()=>{t.style.opacity='0';},3200);
 }
 
+
+// ── 営業管理（商談パイプライン）── //
+const TEMPS={
+  hot: {label:'HOT', color:'#EF4444',bg:'#FEF2F2',fg:'#B91C1C',rate:.7,desc:'1ヶ月以内に受注見込み'},
+  warm:{label:'WARM',color:'#F59E0B',bg:'#FFFBEB',fg:'#B45309',rate:.4,desc:'3ヶ月以内に検討'},
+  cool:{label:'COOL',color:'#3B82F6',bg:'#EFF6FF',fg:'#1D4ED8',rate:.1,desc:'情報収集・関係構築'},
+};
+const STAGES=['リード','ヒアリング','提案','見積提示','クロージング'];
+const PRODUCTS={standard:{label:'スタンダード',monthly:true},light:{label:'ライト',monthly:true},project:{label:'プロジェクト型',monthly:false},training:{label:'研修',monthly:false}};
+let editDealId=null;
+// 商談の評価額：月額商材は12ヶ月分で換算
+function dealValue(d){return PRODUCTS[d.product]?.monthly?(d.amount||0)*12:(d.amount||0);}
+function dealAmountLabel(d){return PRODUCTS[d.product]?.monthly?`${fmt(d.amount||0)}/月`:fmt(d.amount||0);}
+
+function renderPipeline(){
+  const mine=d=>activeStaff==='all'||d.staff===activeStaff;
+  const open=deals.filter(d=>d.status==='open'&&mine(d));
+  const closed=deals.filter(d=>d.status!=='open'&&mine(d)).sort((a,b)=>(b.closedAt||'')>(a.closedAt||'')?1:-1);
+  const ym=ymOf(TODAY), today=dateStr(TODAY);
+  const weighted=open.reduce((s,d)=>s+dealValue(d)*TEMPS[d.temp].rate,0);
+  const wonM=closed.filter(d=>d.status==='won'&&(d.closedAt||'').startsWith(ym));
+  const won=closed.filter(d=>d.status==='won').length, lost=closed.filter(d=>d.status==='lost').length;
+  const overdue=open.filter(d=>d.nextDate&&d.nextDate<today);
+  const staffName=activeStaff==='all'?'全員':STAFF[activeStaff]?.name;
+
+  const card=d=>{
+    const st=STAFF[d.staff]; const t=TEMPS[d.temp];
+    const nextEv=events.filter(e=>e.client===d.company&&e.date>=today).sort((a,b)=>a.date>b.date?1:a.date<b.date?-1:a.slot-b.slot)[0];
+    const od=d.nextDate&&d.nextDate<today;
+    return `<div class="deal-card" draggable="true" data-id="${d.id}" style="border-left-color:${t.color};"
+        ondragstart="dealDragStart(event,${d.id})" ondragend="dealDragEnd(event)" onclick="openDealModal(${d.id})">
+      <div class="dc-top"><div class="dc-name">${d.company}</div><div class="dc-amt">${dealAmountLabel(d)}</div></div>
+      <div class="dc-meta">${PRODUCTS[d.product]?.label||''} · ${d.source||''}${d.closeMonth?` · ${+d.closeMonth.slice(5)}月受注予定`:''}</div>
+      <div class="dc-stage" title="${STAGES[d.stage]}">${STAGES.map((_,i)=>`<span class="${i<=d.stage?'on':''}"></span>`).join('')}</div>
+      <div class="dc-foot">
+        <span class="dc-next${od?' overdue':''}">${od?'⚠ 期限切れ ':''}${d.nextDate?d.nextDate.slice(5).replace('-','/')+' ':''}${d.nextAction||STAGES[d.stage]}</span>
+        <span class="dc-staff" style="background:${st?.color||'#999'};" title="${st?.name||''}">${st?.short?.[0]||'?'}</span>
+      </div>
+      ${nextEv?`<div class="dc-meta" style="margin-top:5px;color:#4338CA;">📅 ${nextEv.date.slice(5).replace('-','/')} ${SLOTS[nextEv.slot]} ${TYPE_LABEL[nextEv.type]}</div>`:''}
+    </div>`;
+  };
+  const col=k=>{
+    const t=TEMPS[k]; const list=open.filter(d=>d.temp===k).sort((a,b)=>b.stage-a.stage||dealValue(b)-dealValue(a));
+    const sum=list.reduce((s,d)=>s+dealValue(d),0);
+    return `<div class="pipe-col" data-temp="${k}" ondragover="dealDragOver(event)" ondragleave="this.classList.remove('drag-over')" ondrop="dealDrop(event,'${k}')">
+      <div class="pipe-col-hd">
+        <div><div class="t"><i style="background:${t.color};"></i><span style="color:${t.fg};">${t.label}</span><span class="section-count">${list.length}</span></div><div class="sub">${t.desc}（確度${t.rate*100}%）</div></div>
+        <div class="sum">${fmt(sum)}<div class="sub">加重 ${fmt(Math.round(sum*t.rate))}</div></div>
+      </div>
+      ${list.map(card).join('')||`<div style="text-align:center;color:var(--fg4);font-size:11px;padding:20px 0;">商談なし</div>`}
+    </div>`;
+  };
+  const stageCounts=STAGES.map((_,i)=>open.filter(d=>d.stage===i).length);
+  const maxStage=Math.max(1,...stageCounts);
+  const srcMap={};open.forEach(d=>srcMap[d.source]=(srcMap[d.source]||0)+1);
+
+  document.getElementById('pipelineInner').innerHTML=`
+  <div class="obj-header">
+    <div class="obj-icon" style="background:#FFE4E6;color:#E11D48;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z"/></svg></div>
+    <div class="obj-meta"><div class="obj-label">Sales Pipeline</div><div class="obj-name">営業管理</div><div class="obj-sub">見込み度 HOT / WARM / COOL · 表示：${staffName}</div></div>
+    <div class="obj-badges"><span class="pill red">HOT ${open.filter(d=>d.temp==='hot').length}</span><span class="pill amber">WARM ${open.filter(d=>d.temp==='warm').length}</span><span class="pill blue">COOL ${open.filter(d=>d.temp==='cool').length}</span></div>
+  </div>
+
+  <div class="kpi-grid" style="margin-bottom:16px;">
+    <div class="kpi-card blue"><div class="kpi-label">進行中の商談</div><div class="kpi-value">${open.length}<span style="font-size:12px;">件</span></div><div class="kpi-diff">総額 ${fmt(open.reduce((s,d)=>s+dealValue(d),0))}</div></div>
+    <div class="kpi-card purple"><div class="kpi-label">加重見込み金額</div><div class="kpi-value">${fmt(Math.round(weighted))}</div><div class="kpi-diff">HOT70% / WARM40% / COOL10%</div></div>
+    <div class="kpi-card green"><div class="kpi-label">今月の受注</div><div class="kpi-value">${wonM.length}<span style="font-size:12px;">件</span></div><div class="kpi-diff">${fmt(wonM.reduce((s,d)=>s+dealValue(d),0))}（年額換算）</div></div>
+    <div class="kpi-card amber"><div class="kpi-label">受注率</div><div class="kpi-value">${won+lost?Math.round(won/(won+lost)*100):0}<span style="font-size:12px;">%</span></div><div class="kpi-diff">受注 ${won} / 失注 ${lost}</div></div>
+    <div class="kpi-card red"><div class="kpi-label">期限切れアクション</div><div class="kpi-value" style="color:${overdue.length?'#DC2626':'inherit'} !important;">${overdue.length}<span style="font-size:12px;">件</span></div><div class="kpi-diff">次回アクション期日超過</div></div>
+  </div>
+
+  <div style="font-size:11px;color:var(--fg3);margin:-4px 0 10px 4px;">カードをドラッグして列を移すと見込み度を変更できます。クリックで詳細・編集。</div>
+  <div class="pipe-board">${['hot','warm','cool'].map(col).join('')}</div>
+
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;margin-bottom:16px;">
+    <div class="card"><div class="card-header"><span class="card-title">フェーズ別 件数</span></div>
+      <div class="card-body"><div class="pipe-funnel">
+        ${STAGES.map((sname,i)=>`<div class="row"><span>${sname}</span><div><div class="bar" style="width:${stageCounts[i]/maxStage*100}%;"></div></div><span style="font-family:var(--mono);text-align:right;">${stageCounts[i]}件</span></div>`).join('')}
+      </div></div>
+    </div>
+    <div class="card"><div class="card-header"><span class="card-title">次回アクション（期日順）</span></div>
+      <div class="card-body no-top">
+        ${open.filter(d=>d.nextDate).sort((a,b)=>a.nextDate>b.nextDate?1:-1).slice(0,6).map(d=>{const od=d.nextDate<today;const t=TEMPS[d.temp];
+          return `<div class="activity-row" style="cursor:pointer;" onclick="openDealModal(${d.id})">
+            <div class="activity-icon" style="background:${t.bg};color:${t.fg};font-size:9px;font-weight:800;">${t.label}</div>
+            <div class="activity-body"><strong>${d.company}</strong><br><span style="font-size:11px;color:var(--fg3);">${d.nextAction||'—'}</span></div>
+            <div class="activity-time" style="${od?'color:#DC2626;font-weight:700;':''}">${od?'期限切れ ':''}${d.nextDate.slice(5).replace('-','/')}</div>
+          </div>`;}).join('')||'<div style="color:var(--fg4);font-size:12px;padding:8px 0;">予定されたアクションはありません</div>'}
+      </div>
+    </div>
+    <div class="card"><div class="card-header"><span class="card-title">流入経路（進行中）</span></div>
+      <div class="card-body">
+        ${Object.entries(srcMap).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`<div class="hbar-row"><div class="hbar-label">${k}</div><div class="hbar-track"><div class="hbar-fill" style="width:${v/Math.max(1,open.length)*100}%;background:#8B5CF6;"><span>${v}件</span></div></div></div>`).join('')||'<div style="color:var(--fg4);font-size:12px;">データなし</div>'}
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header" style="padding:14px 18px 8px;"><span class="card-title">受注・失注の履歴</span><span class="section-count">${closed.length}件</span></div>
+    <div class="table-wrap"><table class="dt">
+      <thead><tr><th>確定日</th><th>会社名</th><th>商材</th><th class="num">金額</th><th>担当</th><th>流入経路</th><th class="center">結果</th></tr></thead>
+      <tbody>${closed.map(d=>`<tr style="cursor:pointer;" onclick="openDealModal(${d.id})">
+        <td style="font-family:var(--mono);font-size:11px;">${(d.closedAt||'').slice(5).replace('-','/')||'—'}</td>
+        <td style="font-weight:600;">${d.company}</td><td>${PRODUCTS[d.product]?.label||''}</td>
+        <td class="num">${dealAmountLabel(d)}</td><td>${STAFF[d.staff]?.short||'—'}</td><td>${d.source||''}</td>
+        <td class="center"><span class="pill ${d.status==='won'?'green':'grey'}">${d.status==='won'?'受注':'失注'}</span></td></tr>`).join('')||'<tr><td colspan="7" style="text-align:center;color:var(--fg4);padding:18px;">まだありません</td></tr>'}</tbody>
+    </table></div>
+  </div>`;
+}
+
+// カードのドラッグで見込み度を変更（PC）
+let dragDealId=null;
+function dealDragStart(ev,id){dragDealId=id;ev.dataTransfer.effectAllowed='move';ev.dataTransfer.setData('text/plain',String(id));ev.currentTarget.classList.add('dragging');}
+function dealDragEnd(ev){ev.currentTarget.classList.remove('dragging');document.querySelectorAll('.pipe-col.drag-over').forEach(c=>c.classList.remove('drag-over'));}
+function dealDragOver(ev){ev.preventDefault();ev.currentTarget.classList.add('drag-over');}
+function dealDrop(ev,temp){
+  ev.preventDefault();ev.currentTarget.classList.remove('drag-over');
+  const d=deals.find(x=>x.id===(dragDealId??+ev.dataTransfer.getData('text/plain')));dragDealId=null;
+  if(d) setDealTemp(d,temp);
+}
+function setDealTemp(d,temp){
+  if(d.temp===temp) return;
+  d.temp=temp;d.updatedAt=dateStr(TODAY);
+  renderPipeline();if(currentPage==='home')renderHome();
+  showToast(`${d.company} を ${TEMPS[temp].label} に変更しました`);
+}
+
+// 商談モーダル
+function pickTemp(t){
+  document.getElementById('dl-temp').value=t;
+  document.querySelectorAll('#dl-temp-picker button').forEach(b=>b.classList.toggle('on',b.dataset.t===t));
+}
+function updateDealAmountLabel(){
+  const m=PRODUCTS[document.getElementById('dl-product').value]?.monthly;
+  document.getElementById('dl-amount-label').textContent=m?'想定月額（円）':'想定金額（一括・円）';
+}
+function openDealModal(id=null){
+  editDealId=id;
+  const d=id!=null?deals.find(x=>x.id===id):null;
+  document.getElementById('dealModalTitle').textContent=d?'商談を編集':'商談を登録';
+  document.getElementById('dl-staff').innerHTML=STAFF.map((s,i)=>`<option value="${i}">${s.name}</option>`).join('');
+  document.getElementById('dl-stage').innerHTML=STAGES.map((s,i)=>`<option value="${i}">${i+1}. ${s}</option>`).join('');
+  const v=(k,def)=>d&&d[k]!=null?d[k]:def;
+  document.getElementById('dl-company').value=v('company','');
+  document.getElementById('dl-contact').value=v('contact','');
+  document.getElementById('dl-industry').value=v('industry','');
+  document.getElementById('dl-staff').value=v('staff',activeStaff==='all'?0:activeStaff);
+  document.getElementById('dl-stage').value=v('stage',0);
+  document.getElementById('dl-source').value=v('source','紹介');
+  document.getElementById('dl-product').value=v('product','standard');
+  document.getElementById('dl-amount').value=v('amount',300000);
+  document.getElementById('dl-close').value=v('closeMonth','');
+  document.getElementById('dl-action').value=v('nextAction','');
+  document.getElementById('dl-memo').value=v('memo','');
+  document.getElementById('dl-next').value=v('nextDate','');
+  pickTemp(v('temp','warm'));updateDealAmountLabel();
+  const isOpen=!d||d.status==='open';
+  document.getElementById('dl-del').style.display=d?'':'none';
+  document.getElementById('dl-won').style.display=d&&isOpen?'':'none';
+  document.getElementById('dl-lost').style.display=d&&isOpen?'':'none';
+  document.getElementById('dl-sched').style.display=d&&isOpen?'':'none';
+  document.getElementById('dl-err').style.display='none';
+  document.getElementById('dealOverlay').hidden=false;
+  setTimeout(()=>buildDatePicker('dl-next-picker','dl-next',v('nextDate','')),0);
+}
+function closeDealModal(){document.getElementById('dealOverlay').hidden=true;editDealId=null;}
+function readDealForm(){
+  return {
+    company:document.getElementById('dl-company').value.trim(),
+    contact:document.getElementById('dl-contact').value.trim(),
+    industry:document.getElementById('dl-industry').value.trim(),
+    staff:parseInt(document.getElementById('dl-staff').value)||0,
+    temp:document.getElementById('dl-temp').value,
+    stage:parseInt(document.getElementById('dl-stage').value)||0,
+    source:document.getElementById('dl-source').value,
+    product:document.getElementById('dl-product').value,
+    amount:parseInt(document.getElementById('dl-amount').value)||0,
+    closeMonth:document.getElementById('dl-close').value,
+    nextAction:document.getElementById('dl-action').value.trim(),
+    nextDate:document.getElementById('dl-next').value,
+    memo:document.getElementById('dl-memo').value.trim(),
+  };
+}
+function saveDeal(){
+  const f=readDealForm();
+  if(!f.company){document.getElementById('dl-err').style.display='';return;}
+  f.updatedAt=dateStr(TODAY);
+  if(editDealId!=null){Object.assign(deals.find(x=>x.id===editDealId),f);showToast(`${f.company} を更新しました`);}
+  else{deals.push({id:nextDealId++,status:'open',createdAt:dateStr(TODAY),...f});showToast(`${f.company} を登録しました`);}
+  closeDealModal();renderPipeline();
+}
+function closeDeal(result){
+  const d=deals.find(x=>x.id===editDealId);if(!d)return;
+  Object.assign(d,readDealForm());
+  if(result==='won'&&!confirm(`${d.company} を受注にしますか？`+(d.product!=='training'?'\n顧問リストにも追加されます。':'')))return;
+  if(result==='lost'&&!confirm(`${d.company} を失注にしますか？`))return;
+  d.status=result;d.closedAt=dateStr(TODAY);
+  let msg=`${d.company} を${result==='won'?'受注':'失注'}にしました`;
+  // 受注した顧問・プロジェクト型は顧問リストへ
+  if(result==='won'&&d.product!=='training'&&!clientList.some(c=>c.name===d.company)){
+    clientList.push({id:nextClientId++,name:d.company,staff:d.staff,plan:d.product,industry:d.industry||'未分類',since:ymOf(TODAY),
+      ...(d.product==='project'?{spot:d.amount}:{}),nextVisit:d.nextDate||dateStr(TODAY),memo:d.memo||''});
+    msg+='（顧問リストに追加）';
+  }
+  closeDealModal();renderPipeline();showToast(msg);
+}
+function deleteDeal(){
+  const d=deals.find(x=>x.id===editDealId);if(!d||!confirm(`${d.company} の商談を削除しますか？`))return;
+  deals=deals.filter(x=>x.id!==d.id);closeDealModal();renderPipeline();showToast('商談を削除しました');
+}
+function scheduleDeal(){
+  const d=deals.find(x=>x.id===editDealId);if(!d)return;
+  closeDealModal();
+  addPreset={type:'ev-sales',client:d.company,staff:d.staff};
+  addSlotDate=d.nextDate&&d.nextDate>=dateStr(TODAY)?d.nextDate:dateStr(TODAY);
+  openAddModal();
+}
+
 // ── 保存（ブラウザの localStorage。デモ版と本番でキーを分ける）── //
-const STORE_KEY = DEMO ? 'aibuddy-portal:demo' : 'aibuddy-portal:prod';
+const STORE_KEY = DEMO ? 'aibuddy-portal:demo:'+(DEMO.version||1) : 'aibuddy-portal:prod';  // デモはデータ版が変わると初期化
 let storeWarned=false, resetting=false;
 function persist(){
   if(resetting) return;  // リセット中はページ離脱時の自動保存で書き戻さない
   try{
-    localStorage.setItem(STORE_KEY, JSON.stringify({v:1,savedAt:new Date().toISOString(),staff:STAFF,clients:clientList,events,nextId,nextClientId}));
+    localStorage.setItem(STORE_KEY, JSON.stringify({v:1,savedAt:new Date().toISOString(),staff:STAFF,clients:clientList,events,nextId,nextClientId,deals,nextDealId}));
   }catch(err){
     if(!storeWarned){storeWarned=true;showToast('このブラウザではデータを保存できません（再読み込みで消えます）');}
   }
@@ -2235,6 +2630,8 @@ function restore(){
     events=d.events||[];
     nextId=Math.max(d.nextId||1,...events.map(e=>e.id+1));
     nextClientId=Math.max(d.nextClientId||100,...clientList.map(c=>c.id+1));
+    if(Array.isArray(d.deals)) deals=d.deals;
+    nextDealId=Math.max(d.nextDealId||1,...deals.map(x=>x.id+1));
   }catch(err){}
 }
 function resetDemo(){
@@ -2243,7 +2640,7 @@ function resetDemo(){
   location.reload();
 }
 // データを変更する操作のあとに自動保存
-['saveStaff','deleteStaff','saveEvent','deleteEvent','deleteSeriesEvent','moveEvent','saveClient','execDeleteClient'].forEach(name=>{
+['saveStaff','deleteStaff','saveEvent','deleteEvent','deleteSeriesEvent','moveEvent','saveClient','execDeleteClient','saveDeal','closeDeal','deleteDeal','setDealTemp'].forEach(name=>{
   const fn=window[name];
   window[name]=function(...args){const r=fn.apply(this,args);persist();return r;};
 });

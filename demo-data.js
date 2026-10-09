@@ -4,6 +4,8 @@
 // ════════════════════════════════════════════════════════════
 window.DEMO_DATA = {
   // デモは日付を固定（2026/10/9 金）
+  // データの版（変えるとデモの保存データが初期化される）
+  version: 2,
   today: '2026-10-09',
 
   // 架空の担当者
@@ -90,7 +92,39 @@ window.DEMO_DATA = {
   {id:64,staff:1,client:'合同会社東京広告',type:'ev-report',date:'2026-10-30',slot:14,dur:2},
   {id:79,staff:0,client:'株式会社福岡農業',type:'ev-visit',date:'2026-10-09',slot:2,dur:3},
   {id:80,staff:1,client:'合同会社鈴木食品',type:'ev-online',date:'2026-10-09',slot:8,dur:2},
-  {id:81,staff:2,client:'株式会社仙台テック',type:'ev-chat',date:'2026-10-09',slot:12,dur:1}
+  {id:81,staff:2,client:'株式会社仙台テック',type:'ev-chat',date:'2026-10-09',slot:12,dur:1},
+  // 研修・商談の予定
+  {id:82,staff:2,client:'株式会社大阪印刷',type:'ev-training',date:'2026-09-30',slot:2,dur:6,title:'社内向けChatGPT研修',people:15,fee:300000},
+  {id:83,staff:1,client:'株式会社青山物流',type:'ev-training',date:'2026-10-02',slot:8,dur:4,title:'生成AI 基礎研修（管理職向け）',people:8,fee:250000},
+  {id:84,staff:0,client:'株式会社田中製作所',type:'ev-training',date:'2026-10-07',slot:0,dur:4,title:'プロンプト実践ワークショップ',people:12,fee:200000},
+  {id:85,staff:1,client:'合同会社鈴木食品',type:'ev-training',date:'2026-10-15',slot:8,dur:6,title:'品質記録×AI 活用研修',people:10,fee:280000},
+  {id:86,staff:0,client:'株式会社しまなみ建設',type:'ev-training',date:'2026-10-22',slot:2,dur:4,title:'生成AI 体験研修（無料トライアル後）',people:20,fee:150000},
+  {id:87,staff:2,client:'株式会社仙台テック',type:'ev-training',date:'2026-10-28',slot:0,dur:6,title:'問い合わせ対応AI 運用研修',people:6,fee:350000},
+  {id:88,staff:0,client:'株式会社しまなみ建設',type:'ev-sales',date:'2026-10-13',slot:4,dur:2},
+  {id:89,staff:1,client:'医療法人さくら会',type:'ev-sales',date:'2026-10-14',slot:12,dur:2},
+  {id:90,staff:2,client:'株式会社北斗精機',type:'ev-sales',date:'2026-10-16',slot:2,dur:2},
+  {id:91,staff:0,client:'有限会社みなと不動産',type:'ev-sales',date:'2026-10-20',slot:10,dur:2},
+  {id:92,staff:1,client:'株式会社ひかり保育サービス',type:'ev-sales',date:'2026-10-21',slot:0,dur:2}
 ],
-  nextId: 82,
+  nextId: 93,
+
+  // 架空の商談（temp: hot/warm/cool, stage: 0リード〜4クロージング, amount: 月額商材は月額・他は一括）
+  deals: [
+    {id:1,company:'株式会社しまなみ建設',contact:'経営企画室 森様',industry:'建設業',staff:0,temp:'hot',stage:4,source:'紹介',product:'standard',amount:300000,closeMonth:'2026-10',nextAction:'契約書の最終確認',nextDate:'2026-10-13',memo:'社長決裁済み。研修とセットで導入予定',status:'open'},
+    {id:2,company:'医療法人さくら会',contact:'事務長 小林様',industry:'医療',staff:1,temp:'hot',stage:3,source:'説明会/セミナー',product:'standard',amount:300000,closeMonth:'2026-11',nextAction:'見積の再提示（年契約割引）',nextDate:'2026-10-14',memo:'受付業務の効率化が課題',status:'open'},
+    {id:3,company:'株式会社北斗精機',contact:'製造部 斎藤様',industry:'製造業',staff:2,temp:'hot',stage:3,source:'Web問い合わせ',product:'project',amount:900000,closeMonth:'2026-11',nextAction:'PoC範囲の合意',nextDate:'2026-10-08',memo:'検査記録の自動化PoC。予算確保済み',status:'open'},
+    {id:4,company:'有限会社みなと不動産',contact:'代表 松本様',industry:'不動産',staff:0,temp:'warm',stage:2,source:'紹介',product:'light',amount:200000,closeMonth:'2026-12',nextAction:'物件紹介文の生成デモ',nextDate:'2026-10-20',memo:'物件紹介文・SNS投稿の作成負担',status:'open'},
+    {id:5,company:'株式会社ひかり保育サービス',contact:'本部 井上様',industry:'保育・福祉',staff:1,temp:'warm',stage:1,source:'説明会/セミナー',product:'training',amount:250000,closeMonth:'2026-12',nextAction:'研修カリキュラム案を提出',nextDate:'2026-10-21',memo:'保育士向けの書類作成研修を希望',status:'open'},
+    {id:6,company:'株式会社ミナミ運輸',contact:'総務課 木村様',industry:'物流',staff:2,temp:'warm',stage:1,source:'既存顧客',product:'standard',amount:300000,closeMonth:'2027-01',nextAction:'青山物流の事例を共有',nextDate:'2026-10-23',memo:'青山物流からの紹介。配車業務に関心',status:'open'},
+    {id:7,company:'合同会社あおぞら歯科',contact:'院長 加藤様',industry:'医療',staff:0,temp:'warm',stage:2,source:'Web問い合わせ',product:'light',amount:200000,closeMonth:'2026-12',nextAction:'予約対応の自動化提案',nextDate:'2026-10-06',memo:'',status:'open'},
+    {id:8,company:'株式会社やまと食品',contact:'営業部 吉田様',industry:'食品製造',staff:1,temp:'cool',stage:0,source:'展示会',product:'standard',amount:300000,closeMonth:'',nextAction:'資料送付・メルマガ登録',nextDate:'2026-10-27',memo:'展示会で名刺交換',status:'open'},
+    {id:9,company:'株式会社グリーン設備',contact:'専務 中島様',industry:'設備工事',staff:2,temp:'cool',stage:0,source:'テレアポ',product:'light',amount:200000,closeMonth:'',nextAction:'来月に再アプローチ',nextDate:'2026-11-10',memo:'時期尚早とのこと',status:'open'},
+    {id:10,company:'有限会社こもれび旅館',contact:'女将 山口様',industry:'宿泊',staff:0,temp:'cool',stage:1,source:'説明会/セミナー',product:'training',amount:150000,closeMonth:'',nextAction:'閑散期（1月）に研修提案',nextDate:'2026-12-01',memo:'多言語対応に興味',status:'open'},
+    {id:11,company:'株式会社田中製作所',contact:'工場長 田中様',industry:'製造業',staff:0,temp:'hot',stage:4,source:'紹介',product:'standard',amount:300000,closeMonth:'2026-10',nextAction:'',nextDate:'',memo:'',status:'won',closedAt:'2026-10-01'},
+    {id:12,company:'株式会社仙台テック',contact:'CS部 佐々木様',industry:'IT',staff:2,temp:'hot',stage:4,source:'Web問い合わせ',product:'standard',amount:300000,closeMonth:'2026-10',nextAction:'',nextDate:'',memo:'',status:'won',closedAt:'2026-10-02'},
+    {id:13,company:'合同会社東京広告',contact:'代表 高田様',industry:'広告',staff:1,temp:'hot',stage:4,source:'説明会/セミナー',product:'light',amount:200000,closeMonth:'2026-10',nextAction:'',nextDate:'',memo:'',status:'won',closedAt:'2026-10-05'},
+    {id:14,company:'株式会社神戸設計',contact:'所長 藤田様',industry:'建築設計',staff:2,temp:'warm',stage:2,source:'紹介',product:'standard',amount:300000,closeMonth:'',nextAction:'',nextDate:'',memo:'他社ツールを採用',status:'lost',closedAt:'2026-09-25'},
+    {id:15,company:'有限会社まるやま商店',contact:'店主 丸山様',industry:'小売',staff:1,temp:'cool',stage:1,source:'テレアポ',product:'light',amount:200000,closeMonth:'',nextAction:'',nextDate:'',memo:'予算見送り',status:'lost',closedAt:'2026-09-18'}
+  ],
+  nextDealId: 16,
 };
