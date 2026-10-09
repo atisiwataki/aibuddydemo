@@ -840,6 +840,12 @@ tr:hover .row-actions { opacity: 1; }
 /* bottom nav (mobile) */
 .bottom-nav { background: rgba(255,255,255,.72) !important; backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border-top: 1px solid rgba(255,255,255,.8) !important; }
 
+
+/* topbar の折り返し防止 */
+.content .topbar-title, .content .staff-filter, .content .btn-today, .content .cal-legend span, .content .week-label { white-space: nowrap; }
+.content .topbar-title { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+@media (max-width: 1280px) { .content #legendWrap { display: none !important; } }
+@media (max-width: 960px)  { .content #staffFiltersWrap { display: none !important; } }
 @media (max-width: 768px) {
   .content .page-body { padding: 16px 14px 80px; }
   .content #pageSchedule .cal-scroll { margin: 12px; }
