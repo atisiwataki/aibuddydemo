@@ -907,6 +907,9 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; }
 .content .plan-mrr { white-space: nowrap; min-width: 0; font-size: 11px; }
 .content .plan-name { white-space: nowrap; }
 
+/* 営業担当バッジ（サイドバー） */
+.sales-badge { margin-left: auto; font-size: 9px; font-weight: 700; color: #FDE68A; background: rgba(253,230,138,.15); border-radius: 4px; padding: 0 5px; line-height: 15px; }
+
 /* KPI は幅に合わせて折り返し */
 .content .kpi-grid { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)) !important; }
 
@@ -1082,9 +1085,10 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; }
     <div class="modal-body">
       <div class="field" style="grid-column:1/-1;"><label>会社名 <span style="color:var(--red);">*</span></label><input type="text" id="cl-name" placeholder="株式会社〇〇"></div>
       <div class="modal-row">
-        <div class="field"><label>担当者 *</label><select id="cl-staff"></select></div>
+        <div class="field"><label>担当者（コンサル） *</label><select id="cl-staff"></select></div>
         <div class="field"><label>プラン *</label><select id="cl-plan" onchange="updateClientAmount(true)"><option value="light">ライト（¥200,000/月）</option><option value="standard">スタンダード（¥300,000/月）</option><option value="project">プロジェクト型（一括）</option><option value="training">研修（一括）</option></select></div>
       </div>
+      <div class="field"><label>営業担当（受注した人）</label><select id="cl-sales"></select></div>
       <div class="field"><label id="cl-amount-label">月額（円）</label><input type="number" id="cl-amount" min="0" step="10000" placeholder="200000"><div id="cl-amount-hint" style="font-size:10px;color:var(--fg4);"></div></div>
       <div class="modal-row">
         <div class="field"><label>業種</label><input type="text" id="cl-industry" placeholder="製造業、IT など"></div>
@@ -1176,13 +1180,13 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; }
 <!-- STAFF MODAL -->
 <div class="overlay" id="staffOverlay" hidden onclick="if(event.target===this)closeStaffModal()">
   <div class="modal" style="max-width:400px;">
-    <div class="modal-header" style="background:var(--fg);">担当者を追加 <button class="modal-close" onclick="closeStaffModal()">✕</button></div>
+    <div class="modal-header" style="background:var(--fg);"><span id="sfTitle">担当者を追加</span> <button class="modal-close" onclick="closeStaffModal()">✕</button></div>
     <div class="modal-body">
       <div class="modal-row">
         <div class="field"><label>名前 *</label><input id="sf-name" type="text" placeholder="例：鈴木 健一"></div>
         <div class="field"><label>略称 *</label><input id="sf-short" type="text" placeholder="鈴木" maxlength="4"></div>
       </div>
-      <div class="field"><label>役割</label><input id="sf-role" type="text" placeholder="Consultant"></div>
+      <div class="field"><label>役割</label><select id="sf-role"></select></div>
       <div class="field">
         <label>カラー</label>
         <div id="sfColorPicker" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px;"></div>
@@ -1192,7 +1196,7 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; }
     </div>
     <div class="modal-footer">
       <button class="mf-btn" onclick="closeStaffModal()">キャンセル</button>
-      <button class="mf-btn green" onclick="saveStaff()">追加する</button>
+      <button class="mf-btn green" id="sfSaveBtn" onclick="saveStaff()">追加する</button>
     </div>
   </div>
 </div>
@@ -1216,7 +1220,7 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; }
       </div>
       <div class="modal-row">
         <div class="field"><label>業種</label><input id="dl-industry" type="text" placeholder="製造業"></div>
-        <div class="field"><label>自社担当</label><select id="dl-staff"></select></div>
+        <div class="field"><label>営業担当</label><select id="dl-staff"></select></div>
       </div>
       <div class="modal-row">
         <div class="field"><label>商談フェーズ</label><select id="dl-stage"></select></div>
@@ -1433,6 +1437,10 @@ document.addEventListener('click',e=>{
 });
 
 // ── POPULATE STAFF SELECTS ── //
+function salesStaffOptions(withNone){
+  const order=STAFF.map((s,i)=>i).sort((a,b)=>isSalesStaff(STAFF[b])-isSalesStaff(STAFF[a]));
+  return (withNone?'<option value="">—（なし）</option>':'')+order.map(i=>`<option value="${i}">${STAFF[i].name}${isSalesStaff(STAFF[i])?'（営業）':''}</option>`).join('');
+}
 function populateStaffSelects(){
   const opts = STAFF.map((s,i)=>`<option value="${i}">${s.name}</option>`).join('');
   ['cl-staff','a-staff'].forEach(id=>{
@@ -1442,14 +1450,24 @@ function populateStaffSelects(){
 }
 
 // ── STAFF MODAL ── //
-function openStaffModal(){
-  document.getElementById('sf-name').value='';
-  document.getElementById('sf-short').value='';
-  document.getElementById('sf-role').value='Consultant';
+// 役割の選択肢（「営業」を含む役割は営業担当として扱う）
+const STAFF_ROLES=['コンサルタント','リードコンサルタント','営業担当','コンサルタント兼営業','マネージャー'];
+const isSalesStaff=s=>/営業|sales/i.test(s?.role||'');
+let editStaffIdx=null;
+function openStaffModal(idx=null){
+  editStaffIdx=idx;
+  const st=idx!=null?STAFF[idx]:null;
+  document.getElementById('sfTitle').textContent=st?'担当者を編集':'担当者を追加';
+  document.getElementById('sfSaveBtn').textContent=st?'保存する':'追加する';
+  document.getElementById('sf-name').value=st?st.name:'';
+  document.getElementById('sf-short').value=st?st.short:'';
+  const roles=[...STAFF_ROLES]; if(st&&st.role&&!roles.includes(st.role)) roles.push(st.role);  // 既存の独自役割も残す
+  document.getElementById('sf-role').innerHTML=roles.map(r=>`<option>${r}</option>`).join('');
+  document.getElementById('sf-role').value=st?.role||'コンサルタント';
   document.getElementById('sf-err').style.display='none';
   // default color = first unused
   const used=STAFF.map(s=>s.color);
-  const def=STAFF_COLORS.find(c=>!used.includes(c.color))||STAFF_COLORS[0];
+  const def=st?{color:st.color}:(STAFF_COLORS.find(c=>!used.includes(c.color))||STAFF_COLORS[0]);
   document.getElementById('sf-color').value=def.color;
   // build color swatches
   const picker=document.getElementById('sfColorPicker');
@@ -1466,28 +1484,31 @@ function selectStaffColor(color){
     el.style.outline=el.dataset.color===color?'3px solid var(--fg)':'3px solid transparent';
   });
 }
-function closeStaffModal(){ document.getElementById('staffOverlay').hidden=true; }
+function closeStaffModal(){ document.getElementById('staffOverlay').hidden=true; editStaffIdx=null; }
 function saveStaff(){
   const name=document.getElementById('sf-name').value.trim();
   const short=document.getElementById('sf-short').value.trim();
   if(!name||!short){ document.getElementById('sf-err').style.display=''; return; }
-  const role=document.getElementById('sf-role').value.trim()||'Consultant';
+  const role=document.getElementById('sf-role').value||'コンサルタント';
   const color=document.getElementById('sf-color').value;
   const entry=STAFF_COLORS.find(c=>c.color===color)||{color,bg:color+'22'};
-  STAFF.push({name,short,role,color:entry.color,bg:entry.bg});
+  const editing=editStaffIdx!=null;
+  if(editing) Object.assign(STAFF[editStaffIdx],{name,short,role,color:entry.color,bg:entry.bg});
+  else STAFF.push({name,short,role,color:entry.color,bg:entry.bg});
   closeStaffModal();
   populateStaffSelects();
   buildSidebarStaff();
-  if(currentPage==='schedule'){buildStaffFilters();render();}
-  showToast(`${name} を追加しました`);
+  switchPage(currentPage);
+  showToast(`${name} を${editing?'更新':'追加'}しました`);
 }
 function deleteStaff(i){
-  const assigned=clientList.filter(c=>c.staff===i).length+events.filter(e=>e.staff===i).length;
-  if(assigned>0){ showToast(`${STAFF[i].name} には顧客または予定が割り当て済みです`); return; }
+  const assigned=clientList.filter(c=>c.staff===i||c.sales===i).length+events.filter(e=>e.staff===i).length+deals.filter(d=>d.staff===i).length;
+  if(assigned>0){ showToast(`${STAFF[i].name} には顧客・予定・商談が割り当て済みです`); return; }
   const name=STAFF[i].name;
   STAFF.splice(i,1);
   // shift staff indices in clientList/events
-  clientList.forEach(c=>{ if(c.staff>i) c.staff--; });
+  clientList.forEach(c=>{ if(c.staff>i) c.staff--; if(c.sales!=null&&c.sales>i) c.sales--; });
+  deals.forEach(d=>{ if(d.staff>i) d.staff--; });
   events.forEach(e=>{ if(e.staff>i) e.staff--; });
   if(activeStaff===i) activeStaff='all';
   else if(typeof activeStaff==='number'&&activeStaff>i) activeStaff--;
@@ -1511,8 +1532,9 @@ function buildSidebarStaff(){
     </button>`+
     STAFF.map((s,i)=>`<div style="display:flex;align-items:center;gap:4px;">
       <button class="staff-chip${activeStaff===i?' active':''}" onclick="setStaff(${i})" style="flex:1;">
-        <div class="staff-avatar" style="background:${s.color};">${s.short[0]}</div>${s.short}
+        <div class="staff-avatar" style="background:${s.color};">${s.short[0]}</div>${s.short}${isSalesStaff(s)?'<span class="sales-badge">営業</span>':''}
       </button>
+      <button onclick="openStaffModal(${i})" title="編集" style="background:none;border:none;color:rgba(255,255,255,.3);cursor:pointer;padding:2px 3px;font-size:11px;border-radius:4px;flex-shrink:0;" onmouseover="this.style.color='rgba(255,255,255,.85)'" onmouseout="this.style.color='rgba(255,255,255,.3)'">✎</button>
       <button onclick="deleteStaff(${i})" title="削除" style="background:none;border:none;color:rgba(255,255,255,.3);cursor:pointer;padding:2px 4px;font-size:12px;border-radius:4px;flex-shrink:0;" onmouseover="this.style.color='rgba(255,100,100,.8)'" onmouseout="this.style.color='rgba(255,255,255,.3)'">✕</button>
     </div>`).join('');
 }
@@ -1934,7 +1956,7 @@ function renderClients(){
       </div>
       <div class="table-wrap">
         <table class="dt">
-          <thead><tr><th>クライアント名</th><th>プラン</th><th>業種</th><th>契約開始</th><th class="num">金額</th><th>次回予定</th><th>メモ</th><th></th></tr></thead>
+          <thead><tr><th>クライアント名</th><th>プラン</th><th>営業担当</th><th>業種</th><th>契約開始</th><th class="num">金額</th><th>次回予定</th><th>メモ</th><th></th></tr></thead>
           <tbody>`;
     myC.forEach(c=>{
       const plan=PLANS[c.plan];
@@ -1943,6 +1965,7 @@ function renderClients(){
       html+=`<tr>
         <td class="link-cell" onclick="openClientModal(${c.id})" style="cursor:pointer;">${c.name}</td>
         <td><span class="pill" style="background:${plan.bg};color:${plan.color};">${plan.label}</span></td>
+        <td style="font-size:11px;">${c.sales!=null&&STAFF[c.sales]?`<span style="display:inline-flex;align-items:center;gap:4px;"><span class="staff-dot" style="background:${STAFF[c.sales].color};"></span>${STAFF[c.sales].short}</span>`:'<span style="color:var(--fg4);">—</span>'}</td>
         <td>${c.industry}</td>
         <td style="font-family:var(--mono);font-size:11px;">${c.since}</td>
         <td class="num">${clientAmountLabel(c)}</td>
@@ -2058,6 +2081,17 @@ function renderSales(){
             <div class="hbar-val">${cnt}社</div>
           </div>`;
         }).join('')}
+      </div>
+    </div>
+    <div class="card"><div class="card-header"><span class="card-title">営業担当別 獲得売上</span></div>
+      <div class="card-body">
+        ${(()=>{const rows=STAFF.map((st,i)=>{const l=clientList.filter(c=>c.sales===i);return {st,cnt:l.length,mrr:l.reduce((a,c)=>a+clientMRR(c),0),one:l.reduce((a,c)=>a+(isMonthly(c.plan)?0:(c.spot||0)),0)};}).filter(r=>r.cnt>0).sort((a,b)=>b.mrr-a.mrr);
+          const mx=Math.max(1,...rows.map(r=>r.mrr));
+          return rows.map(r=>`<div class="hbar-row">
+            <div class="hbar-label">${r.st.name}</div>
+            <div class="hbar-track"><div class="hbar-fill" style="width:${Math.max(4,r.mrr/mx*100)}%;background:${r.st.color};"><span>${fmt(r.mrr)}/月</span></div></div>
+            <div class="hbar-val" style="white-space:nowrap;">${r.cnt}社${r.one?` · 一括${fmt(r.one)}`:''}</div>
+          </div>`).join('')||'<div style="color:var(--fg4);font-size:12px;">営業担当が登録された顧客はまだありません</div>';})()}
       </div>
     </div>
     <div class="card"><div class="card-header"><span class="card-title">クライアント別 MRR</span></div>
@@ -2364,6 +2398,8 @@ function openClientModal(id=null){
     if(!c) return;
     document.getElementById('cl-name').value=c.name;
     document.getElementById('cl-plan').value=c.plan;
+    document.getElementById('cl-sales').innerHTML=salesStaffOptions(true);
+    document.getElementById('cl-sales').value=c.sales!=null?c.sales:'';
     updateClientAmount(false);
     document.getElementById('cl-amount').value=isMonthly(c.plan)?clientMRR(c):(c.spot||'');
     document.getElementById('cl-industry').value=c.industry;
@@ -2376,6 +2412,9 @@ function openClientModal(id=null){
   } else {
     document.getElementById('cl-name').value='';
     document.getElementById('cl-plan').value='light';
+    document.getElementById('cl-sales').innerHTML=salesStaffOptions(true);
+    const firstSales=STAFF.findIndex(isSalesStaff);
+    document.getElementById('cl-sales').value=firstSales>=0?firstSales:'';
     updateClientAmount(true);
     document.getElementById('cl-industry').value='';
     document.getElementById('cl-since').value=`${TODAY.getFullYear()}-${String(TODAY.getMonth()+1).padStart(2,'0')}`;
@@ -2408,6 +2447,8 @@ function saveClient(){
   const amt=amtRaw===''?null:Math.max(0,parseInt(amtRaw)||0);
   // 月額プランは fee、一括プランは spot に保存
   const money=isMonthly(plan)?{fee:amt==null?PLANS[plan].mrr:amt,spot:undefined}:{spot:amt||0,fee:undefined};
+  const salesV=document.getElementById('cl-sales').value;
+  money.sales=salesV===''?null:parseInt(salesV);
 
   if(editClientId!==null){
     const idx=clientList.findIndex(x=>x.id===editClientId);
@@ -2597,13 +2638,13 @@ function openDealModal(id=null){
   editDealId=id;
   const d=id!=null?deals.find(x=>x.id===id):null;
   document.getElementById('dealModalTitle').textContent=d?'商談を編集':'商談を登録';
-  document.getElementById('dl-staff').innerHTML=STAFF.map((s,i)=>`<option value="${i}">${s.name}</option>`).join('');
+  document.getElementById('dl-staff').innerHTML=salesStaffOptions(false);
   document.getElementById('dl-stage').innerHTML=STAGES.map((s,i)=>`<option value="${i}">${i+1}. ${s}</option>`).join('');
   const v=(k,def)=>d&&d[k]!=null?d[k]:def;
   document.getElementById('dl-company').value=v('company','');
   document.getElementById('dl-contact').value=v('contact','');
   document.getElementById('dl-industry').value=v('industry','');
-  document.getElementById('dl-staff').value=v('staff',activeStaff==='all'?0:activeStaff);
+  document.getElementById('dl-staff').value=v('staff',activeStaff!=='all'?activeStaff:Math.max(0,STAFF.findIndex(isSalesStaff)));
   document.getElementById('dl-stage').value=v('stage',0);
   document.getElementById('dl-source').value=v('source','紹介');
   document.getElementById('dl-product').value=v('product','standard');
@@ -2658,7 +2699,7 @@ function closeDeal(result){
   // 受注した顧問・プロジェクト型は顧問リストへ
   if(result==='won'&&!clientList.some(c=>c.name===d.company)){
     clientList.push({id:nextClientId++,name:d.company,staff:d.staff,plan:d.product,industry:d.industry||'未分類',since:ymOf(TODAY),
-      ...(isMonthly(d.product)?{fee:d.amount}:{spot:d.amount}),nextVisit:d.nextDate||dateStr(TODAY),memo:d.memo||''});
+      ...(isMonthly(d.product)?{fee:d.amount}:{spot:d.amount}),sales:d.staff,nextVisit:d.nextDate||dateStr(TODAY),memo:d.memo||''});
     msg+='（顧問リストに追加）';
   }
   closeDealModal();renderPipeline();showToast(msg);
