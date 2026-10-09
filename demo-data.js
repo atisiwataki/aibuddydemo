@@ -5,7 +5,7 @@
 window.DEMO_DATA = {
   // デモは日付を固定（2026/10/9 金）
   // データの版（変えるとデモの保存データが初期化される）
-  version: 4,
+  version: 5,
   today: '2026-10-09',
 
   // 架空の担当者
@@ -102,8 +102,8 @@ window.DEMO_DATA = {
   {id:85,staff:1,client:'合同会社鈴木食品',type:'ev-training',date:'2026-10-15',slot:8,dur:6,title:'品質記録×AI 活用研修',people:10,fee:280000},
   {id:86,staff:0,client:'株式会社しまなみ建設',type:'ev-training',date:'2026-10-22',slot:2,dur:4,title:'生成AI 体験研修（無料トライアル後）',people:20,fee:150000},
   {id:87,staff:2,client:'株式会社仙台テック',type:'ev-training',date:'2026-10-28',slot:0,dur:6,title:'問い合わせ対応AI 運用研修',people:6,fee:350000},
-  {id:88,staff:0,client:'株式会社しまなみ建設',type:'ev-sales',date:'2026-10-13',slot:4,dur:2},
-  {id:89,staff:1,client:'医療法人さくら会',type:'ev-sales',date:'2026-10-14',slot:12,dur:2},
+  {id:88,staff:3,client:'株式会社しまなみ建設',type:'ev-sales',date:'2026-10-13',slot:4,dur:2},
+  {id:89,staff:3,client:'医療法人さくら会',type:'ev-sales',date:'2026-10-14',slot:12,dur:2},
   {id:90,staff:2,client:'株式会社北斗精機',type:'ev-sales',date:'2026-10-16',slot:2,dur:2},
   {id:91,staff:0,client:'有限会社みなと不動産',type:'ev-sales',date:'2026-10-20',slot:10,dur:2},
   {id:92,staff:1,client:'株式会社ひかり保育サービス',type:'ev-sales',date:'2026-10-21',slot:0,dur:2}
