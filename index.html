@@ -395,6 +395,7 @@ table.dt td.link-cell:hover { text-decoration: underline; }
 .ev:hover { filter: brightness(.95); z-index: 2; }
 .ev-time { font-size: 9px; font-weight: 600; opacity: .7; margin-bottom: 1px; }
 .ev-name { font-weight: 700; font-size: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ev-tag { display: inline-block; background: #14B8A6; color: #fff; font-size: 9px; font-weight: 700; border-radius: 4px; padding: 0 5px; margin-right: 4px; line-height: 14px; vertical-align: 1px; }
 .ev-visit   { background:#DBEAFE; color:#1E40AF; border-left-color:#3B82F6; }
 .ev-online  { background:#DCFCE7; color:#166534; border-left-color:#22C55E; }
 .ev-chat    { background:#EDE9FE; color:#4C1D95; border-left-color:#8B5CF6; }
@@ -1631,7 +1632,7 @@ function render(){
         const pos=L.cols>1?`left:calc(${L.col*100/L.cols}% + 2px);right:auto;width:calc(${100/L.cols}% - 4px);`:'';
         html+=`<div class="ev ${e.type}" style="top:2px;height:${h}px;${pos}" onpointerdown="evPointerDown(event,${e.id})" onclick="event.stopPropagation();if(!suppressEvClick)openDetail(${e.id})">
           <div class="ev-time">${SLOTS[e.slot]}${activeStaff==='all'?' · '+STAFF[e.staff]?.short:''}${e.recur?' ↺':''}</div>
-          <div class="ev-name">${e.type==='ev-training'&&e.title?e.title+'｜':''}${e.client}</div>
+          <div class="ev-name">${e.type==='ev-training'?'<span class="ev-tag">研修</span>':''}${e.client}</div>
         </div>`;
       });
       html+=`</div>`;
