@@ -831,7 +831,8 @@ tr:hover .row-actions { opacity: 1; }
 
 /* modals */
 .overlay { background: rgba(30,27,75,.28); backdrop-filter: blur(6px); }
-.overlay .modal { background: rgba(255,255,255,.88); backdrop-filter: blur(24px); border: 1px solid var(--glass-border); border-radius: 22px; box-shadow: 0 30px 80px rgba(67,56,202,.25); }
+/* backdrop-filter を付けると内部の日付カレンダー(position:fixed)が切れるため付けない */
+.overlay .modal { background: rgba(255,255,255,.96); border: 1px solid var(--glass-border); border-radius: 22px; box-shadow: 0 30px 80px rgba(67,56,202,.25); }
 .overlay .modal-header { background: var(--accent-grad); }
 .overlay .modal-footer { background: rgba(238,240,255,.5); }
 .overlay .field input, .overlay .field select { border-radius: 10px; }
