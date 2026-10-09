@@ -2217,8 +2217,9 @@ function showToast(msg){
 
 // ── 保存（ブラウザの localStorage。デモ版と本番でキーを分ける）── //
 const STORE_KEY = DEMO ? 'aibuddy-portal:demo' : 'aibuddy-portal:prod';
-let storeWarned=false;
+let storeWarned=false, resetting=false;
 function persist(){
+  if(resetting) return;  // リセット中はページ離脱時の自動保存で書き戻さない
   try{
     localStorage.setItem(STORE_KEY, JSON.stringify({v:1,savedAt:new Date().toISOString(),staff:STAFF,clients:clientList,events,nextId,nextClientId}));
   }catch(err){
@@ -2237,6 +2238,7 @@ function restore(){
   }catch(err){}
 }
 function resetDemo(){
+  resetting=true;
   try{localStorage.removeItem(STORE_KEY);}catch(err){}
   location.reload();
 }
