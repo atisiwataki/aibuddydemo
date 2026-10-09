@@ -966,7 +966,12 @@ tr:hover .row-actions { opacity: 1; }
 
 <script>
 // ── DATA ── //
-let STAFF = [];
+// デモ用の架空担当者
+let STAFF = [
+  {name:'佐藤 美咲',short:'佐藤',role:'Lead Consultant',color:'#4A7BF5',bg:'#EBF1FF'},
+  {name:'高橋 翔',  short:'高橋',role:'Consultant',     color:'#16A34A',bg:'#DCFCE7'},
+  {name:'中村 葵',  short:'中村',role:'Consultant',     color:'#D97706',bg:'#FEF3C7'},
+];
 const STAFF_COLORS = [
   {color:'#4A7BF5',bg:'#EBF1FF'},{color:'#8B5CF6',bg:'#EDE9FE'},{color:'#16A34A',bg:'#DCFCE7'},
   {color:'#D97706',bg:'#FEF3C7'},{color:'#DC2626',bg:'#FEE2E2'},{color:'#EC4899',bg:'#FCE7F3'},
@@ -979,7 +984,19 @@ const PLANS = {
   standard: { label:'スタンダード',  color:'#4A7BF5', bg:'#EBF1FF', mrr:300000 },
   project:  { label:'プロジェクト型',color:'#8B5CF6', bg:'#EDE9FE', mrr:0 },
 };
-const clientList = [];
+// デモ用の架空顧客（staff = STAFF のindex）
+const clientList = [
+  {id:1, name:'株式会社田中製作所',  staff:0,plan:'standard',industry:'製造業',  since:'2026-02',nextVisit:'2026-10-14',memo:'生産日報のAI要約を運用中'},
+  {id:2, name:'有限会社山本商事',    staff:0,plan:'light',   industry:'卸売業',  since:'2026-05',nextVisit:'2026-10-16',memo:'見積書作成の自動化を検討'},
+  {id:3, name:'合同会社鈴木食品',    staff:1,plan:'standard',industry:'食品製造',since:'2026-01',nextVisit:'2026-10-15',memo:'品質記録のデジタル化が進行中'},
+  {id:4, name:'株式会社青山物流',    staff:1,plan:'standard',industry:'物流',    since:'2026-03',nextVisit:'2026-10-20',memo:'配車計画へのAI活用をPoC中'},
+  {id:5, name:'株式会社大阪印刷',    staff:2,plan:'light',   industry:'印刷',    since:'2026-06',nextVisit:'2026-10-17',memo:'社内向けChatGPT研修を実施'},
+  {id:6, name:'有限会社名古屋電機',  staff:2,plan:'project', industry:'電気工事',since:'2026-08',nextVisit:'2026-10-22',memo:'施工報告書テンプレ作成（スポット）'},
+  {id:7, name:'株式会社福岡農業',    staff:0,plan:'light',   industry:'農業',    since:'2026-07',nextVisit:'2026-10-21',memo:'出荷予測ダッシュボードを試行'},
+  {id:8, name:'合同会社東京広告',    staff:1,plan:'light',   industry:'広告',    since:'2026-09',nextVisit:'2026-10-13',memo:'SNS投稿案の生成フローを構築'},
+  {id:9, name:'株式会社仙台テック',  staff:2,plan:'standard',industry:'IT',      since:'2026-04',nextVisit:'2026-10-23',memo:'問い合わせ一次対応のAI化'},
+  {id:10,name:'合同会社広島物産',    staff:0,plan:'project', industry:'小売',    since:'2026-10',nextVisit:'2026-10-24',memo:'ECの商品説明文を一括作成'},
+];
 const MRR_HISTORY = [];
 let events = [];
 let nextId = 20;
