@@ -1268,7 +1268,7 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; }
   <button class="dcb-btn confirm" onclick="execDeleteClient()">削除する</button>
 </div>
 
-<script src="demo-data.js" data-demo></script>
+<script src="demo-data.js?v=5" data-demo></script><!-- デモデータ更新時は ?v= も version と同じ番号に上げる（ブラウザキャッシュ対策） -->
 <script>
 // ── DATA ── //
 const DEMO = window.DEMO_DATA || null;  // デモ版のみ demo-data.js が定義
