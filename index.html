@@ -2019,7 +2019,7 @@ function renderSales(){
   <div class="kpi-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:16px;">
     <div class="kpi-card blue"><div class="kpi-label">当月 MRR</div><div class="kpi-value" style="color:var(--primary);">${fmt(totalMRR)}</div><div class="kpi-diff"><span class="up">▲ ${fmt(diff)}</span>&nbsp;前月比</div></div>
     <div class="kpi-card green"><div class="kpi-label">ARR（年間換算）</div><div class="kpi-value">${fmt(totalMRR*12)}</div><div class="kpi-diff"><span class="up">▲ ${fmt(diff*12)}</span></div></div>
-    <div class="kpi-card amber"><div class="kpi-label">ARPU / 社</div><div class="kpi-value">${fmt(clientList.length?Math.round(totalMRR/clientList.length):0)}</div><div class="kpi-diff">月額平均</div></div>
+    <div class="kpi-card amber"><div class="kpi-label">ARPU / 社</div><div class="kpi-value">${fmt((n=>n?Math.round(totalMRR/n):0)(clientList.filter(c=>isMonthly(c.plan)).length))}</div><div class="kpi-diff">月額平均</div></div>
     <div class="kpi-card purple"><div class="kpi-label">稼働クライアント</div><div class="kpi-value">${clientList.length}社</div><div class="kpi-diff">目標 15社</div></div>
     <div class="kpi-card green"><div class="kpi-label">当月 研修売上</div><div class="kpi-value">${fmt(trMonthFee)}</div><div class="kpi-diff">実施済 ${fmt(trDone)} · ${trMonth.length}件${trClientFee?` · 研修契約 ${fmt(trClientFee)}`:''}</div></div>
     <div class="kpi-card purple"><div class="kpi-label">当月 プロジェクト売上</div><div class="kpi-value">${fmt(pjMonthFee)}</div><div class="kpi-diff">${pjMonth.length}件 · 累計 ${fmt(pjTotal)}</div></div>
@@ -2237,7 +2237,7 @@ function renderDashboard(){
     <div class="kpi-card blue"><div class="kpi-label">MRR</div><div class="kpi-value" style="color:var(--primary);">${fmt(totalMRR)}</div><div class="kpi-diff"><span class="up">▲ ${fmt(diff)}</span> 前月比</div></div>
     <div class="kpi-card green"><div class="kpi-label">ARR</div><div class="kpi-value">${fmt(totalMRR*12)}</div><div class="kpi-diff">年間換算</div></div>
     <div class="kpi-card amber"><div class="kpi-label">稼働クライアント</div><div class="kpi-value">${clientList.length}<span style="font-size:12px;">社</span></div><div class="kpi-diff">目標 15社</div></div>
-    <div class="kpi-card purple"><div class="kpi-label">ARPU</div><div class="kpi-value">${fmt(clientList.length?Math.round(totalMRR/clientList.length):0)}</div><div class="kpi-diff">/ 社・月</div></div>
+    <div class="kpi-card purple"><div class="kpi-label">ARPU</div><div class="kpi-value">${fmt((n=>n?Math.round(totalMRR/n):0)(clientList.filter(c=>isMonthly(c.plan)).length))}</div><div class="kpi-diff">/ 社・月</div></div>
     <div class="kpi-card red"><div class="kpi-label">今週アクション</div><div class="kpi-value">${events.filter(e=>e.date>=dateStr(weekStart)&&e.date<=dateStr(addDays(weekStart,4))).length}<span style="font-size:12px;">件</span></div><div class="kpi-diff">訪問+MTG+報告</div></div>
   </div>
 
