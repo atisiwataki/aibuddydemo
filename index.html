@@ -918,6 +918,20 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; }
 .team-count { margin-left: auto; font-size: 9.5px; font-weight: 600; background: rgba(255,255,255,.12); border-radius: 8px; padding: 0 6px; }
 .team-empty { font-size: 10.5px; color: rgba(255,255,255,.3); padding: 2px 12px 6px; }
 
+/* プラン別 契約目標 */
+.target-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; }
+.target-tile { background: rgba(255,255,255,.7); border: 1px solid var(--glass-border); border-top: 4px solid #6366F1; border-radius: 16px; padding: 14px 16px; }
+.tt-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.tt-name { font-size: 15px; font-weight: 800; }
+.tt-price { font-size: 11px; color: var(--fg3); font-family: var(--mono); }
+.tt-goal { font-size: 13px; color: var(--fg2); margin: 6px 0 8px; }
+.tt-goal b { font-size: 26px; font-weight: 800; letter-spacing: -.02em; color: var(--fg); }
+.tt-bar { height: 8px; border-radius: 4px; background: rgba(120,120,200,.15); overflow: hidden; }
+.tt-bar > div { height: 100%; border-radius: 4px; min-width: 2px; }
+.tt-meta { display: flex; justify-content: space-between; gap: 8px; font-size: 12px; color: var(--fg2); margin-top: 8px; }
+.tt-meta b { font-family: var(--mono); }
+.tt-meta.sub { font-size: 10.5px; color: var(--fg3); margin-top: 4px; }
+
 /* KPI は幅に合わせて折り返し */
 .content .kpi-grid { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)) !important; }
 
@@ -1279,6 +1293,8 @@ const STAFF_COLORS = [
   {color:'#0D9488',bg:'#CCFBF1'},{color:'#EA580C',bg:'#FFEDD5'},{color:'#7C3AED',bg:'#EDE9FE'},
   {color:'#0284C7',bg:'#E0F2FE'},
 ];
+// プラン別の契約目標（社数）
+const PLAN_TARGETS = { light:20, standard:30 };
 const PLANS = {
   light:    { label:'ライト',        color:'#6366F1', bg:'#EEF0FF', mrr:200000 },
   standard: { label:'スタンダード',  color:'#4A7BF5', bg:'#EBF1FF', mrr:300000 },
@@ -2612,6 +2628,41 @@ function renderPipeline(){
     <div class="kpi-card green"><div class="kpi-label">今月の受注</div><div class="kpi-value">${wonM.length}<span style="font-size:12px;">件</span></div><div class="kpi-diff">${fmt(wonM.reduce((s,d)=>s+dealValue(d),0))}（年額換算）</div></div>
     <div class="kpi-card amber"><div class="kpi-label">受注率</div><div class="kpi-value">${won+lost?Math.round(won/(won+lost)*100):0}<span style="font-size:12px;">%</span></div><div class="kpi-diff">受注 ${won} / 失注 ${lost}</div></div>
     <div class="kpi-card red"><div class="kpi-label">期限切れアクション</div><div class="kpi-value" style="color:${overdue.length?'#DC2626':'inherit'} !important;">${overdue.length}<span style="font-size:12px;">件</span></div><div class="kpi-diff">次回アクション期日超過</div></div>
+  </div>
+
+  <div class="card" style="margin-bottom:16px;">
+    <div class="card-header"><span class="card-title">プラン別 契約目標</span>
+      <span class="pill blue">ライト ${PLAN_TARGETS.light}社 ＋ スタンダード ${PLAN_TARGETS.standard}社 ＝ 計${PLAN_TARGETS.light+PLAN_TARGETS.standard}社</span></div>
+    <div class="card-body">
+      <div class="target-grid">
+        ${['light','standard'].map(k=>{
+          const pl=PLANS[k], goal=PLAN_TARGETS[k];
+          const have=clientList.filter(c=>c.plan===k).length;
+          const dl=deals.filter(d=>d.status==='open'&&d.product===k);
+          const hot=dl.filter(d=>d.temp==='hot').length;
+          const left=Math.max(0,goal-have), pct=Math.min(100,Math.round(have/goal*100));
+          const pot=Math.min(left,dl.length);
+          return `<div class="target-tile" style="border-top-color:${pl.color};">
+            <div class="tt-head"><span class="tt-name" style="color:${pl.color};">${pl.label}</span><span class="tt-price">${fmt(pl.mrr)}/月</span></div>
+            <div class="tt-goal">目標 <b>${goal}</b>社</div>
+            <div class="tt-bar"><div style="width:${pct}%;background:${pl.color};"></div></div>
+            <div class="tt-meta"><span>契約中 <b>${have}</b>社（${pct}%）</span><span>あと <b>${left}</b>社</span></div>
+            <div class="tt-meta sub"><span>商談中 ${dl.length}件（うちHOT ${hot}件）</span><span>目標時MRR ${fmt(pl.mrr*goal)}</span></div>
+          </div>`;}).join('')}
+        ${(()=>{const goal=PLAN_TARGETS.light+PLAN_TARGETS.standard;
+          const have=clientList.filter(c=>c.plan==='light'||c.plan==='standard').length;
+          const pct=Math.min(100,Math.round(have/goal*100));
+          const mrrGoal=PLANS.light.mrr*PLAN_TARGETS.light+PLANS.standard.mrr*PLAN_TARGETS.standard;
+          return `<div class="target-tile" style="border-top-color:#6366F1;">
+            <div class="tt-head"><span class="tt-name" style="color:#4F46E5;">合計</span><span class="tt-price">ライト＋スタンダード</span></div>
+            <div class="tt-goal">目標 <b>${goal}</b>社</div>
+            <div class="tt-bar"><div style="width:${pct}%;background:var(--accent-grad);"></div></div>
+            <div class="tt-meta"><span>契約中 <b>${have}</b>社（${pct}%）</span><span>あと <b>${Math.max(0,goal-have)}</b>社</span></div>
+            <div class="tt-meta sub"><span>目標達成時 MRR ${fmt(mrrGoal)}</span><span>年額 ${fmt(mrrGoal*12)}</span></div>
+          </div>`;})()}
+      </div>
+      <div style="font-size:10.5px;color:var(--fg4);margin-top:8px;">契約中＝顧問リストに登録されたお客様の社数。商談を「受注」にすると自動で増えます。</div>
+    </div>
   </div>
 
   <div style="font-size:11px;color:var(--fg3);margin:-4px 0 10px 4px;">カードをドラッグして列を移すと見込み度を変更できます。クリックで詳細・編集。</div>
