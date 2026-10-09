@@ -932,6 +932,22 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; }
 .tt-meta b { font-family: var(--mono); }
 .tt-meta.sub { font-size: 10.5px; color: var(--fg3); margin-top: 4px; }
 
+/* 契約目標カード：文字を大きく／背景を同系色で濃く */
+.content .target-card { background: linear-gradient(135deg, rgba(165,180,252,.42), rgba(196,181,253,.38)); border-color: rgba(129,140,248,.35); }
+.target-card .card-header { padding: 18px 22px 0; }
+.target-card .card-title { font-size: 17px; }
+.target-card .pill { font-size: 13px; padding: 4px 12px; }
+.target-card .card-body { padding: 16px 22px 20px; }
+.target-card .target-tile { background: rgba(255,255,255,.88); border-color: rgba(255,255,255,.9); padding: 18px 20px; }
+.target-card .tt-name { font-size: 19px; }
+.target-card .tt-price { font-size: 13px; }
+.target-card .tt-goal { font-size: 15px; margin: 8px 0 10px; }
+.target-card .tt-goal b { font-size: 34px; }
+.target-card .tt-bar { height: 10px; border-radius: 5px; background: rgba(99,102,241,.16); }
+.target-card .tt-meta { font-size: 14px; margin-top: 10px; }
+.target-card .tt-meta.sub { font-size: 12px; margin-top: 6px; }
+.tt-note { font-size: 12px; color: var(--fg3); margin-top: 10px; }
+
 /* KPI は幅に合わせて折り返し */
 .content .kpi-grid { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)) !important; }
 
@@ -2630,7 +2646,7 @@ function renderPipeline(){
     <div class="kpi-card red"><div class="kpi-label">期限切れアクション</div><div class="kpi-value" style="color:${overdue.length?'#DC2626':'inherit'} !important;">${overdue.length}<span style="font-size:12px;">件</span></div><div class="kpi-diff">次回アクション期日超過</div></div>
   </div>
 
-  <div class="card" style="margin-bottom:16px;">
+  <div class="card target-card" style="margin-bottom:16px;">
     <div class="card-header"><span class="card-title">プラン別 契約目標</span>
       <span class="pill blue">ライト ${PLAN_TARGETS.light}社 ＋ スタンダード ${PLAN_TARGETS.standard}社 ＝ 計${PLAN_TARGETS.light+PLAN_TARGETS.standard}社</span></div>
     <div class="card-body">
@@ -2661,7 +2677,7 @@ function renderPipeline(){
             <div class="tt-meta sub"><span>目標達成時 MRR ${fmt(mrrGoal)}</span><span>年額 ${fmt(mrrGoal*12)}</span></div>
           </div>`;})()}
       </div>
-      <div style="font-size:10.5px;color:var(--fg4);margin-top:8px;">契約中＝顧問リストに登録されたお客様の社数。商談を「受注」にすると自動で増えます。</div>
+      <div class="tt-note">契約中＝顧問リストに登録されたお客様の社数。商談を「受注」にすると自動で増えます。</div>
     </div>
   </div>
 
