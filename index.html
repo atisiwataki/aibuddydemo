@@ -898,6 +898,10 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; }
 .pipe-funnel .bar { height: 18px; border-radius: 6px; background: var(--accent-grad); opacity: .85; min-width: 4px; }
 @media (max-width: 960px) { .pipe-board { grid-template-columns: 1fr; } }
 
+/* 表のセルは折り返さない（横スクロールで対応） */
+.content table.dt td, .content table.dt th { white-space: nowrap; }
+.content table.dt td.memo-cell { white-space: normal; min-width: 160px; }
+
 /* KPI は幅に合わせて折り返し */
 .content .kpi-grid { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)) !important; }
 
@@ -1420,7 +1424,7 @@ function populateStaffSelects(){
   const opts = STAFF.map((s,i)=>`<option value="${i}">${s.name}</option>`).join('');
   ['cl-staff','a-staff'].forEach(id=>{
     const el=document.getElementById(id);
-    if(el){ const v=el.value; el.innerHTML=opts; el.value=v<STAFF.length?v:'0'; }
+    if(el){ const v=el.value; el.innerHTML=opts; el.value=(v!==''&&+v<STAFF.length)?v:'0'; }
   });
 }
 
@@ -1930,7 +1934,7 @@ function renderClients(){
         <td style="font-family:var(--mono);font-size:11px;">${c.since}</td>
         <td class="num">${PLANS[c.plan]?.mrr>0?fmt(PLANS[c.plan].mrr):'—'}</td>
         <td style="font-size:11px;color:var(--fg2);">${nextLabel}</td>
-        <td style="font-size:11px;color:var(--fg3);max-width:140px;">${c.memo}</td>
+        <td class="memo-cell" style="font-size:11px;color:var(--fg3);max-width:200px;">${c.memo}</td>
         <td style="white-space:nowrap;">
           <div class="row-actions">
             <button class="row-btn edit" title="編集" onclick="openClientModal(${c.id})">
