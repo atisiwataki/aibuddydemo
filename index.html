@@ -1220,7 +1220,7 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; }
       </div>
       <div class="modal-row">
         <div class="field"><label>商談フェーズ</label><select id="dl-stage"></select></div>
-        <div class="field"><label>流入経路</label><select id="dl-source"><option>紹介</option><option>説明会/セミナー</option><option>Web問い合わせ</option><option>展示会</option><option>既存顧客</option><option>テレアポ</option></select></div>
+        <div class="field"><label>流入経路</label><select id="dl-source"><option>紹介</option><option>既存客</option><option>説明会/セミナー</option><option>Web問い合わせ</option><option>展示会</option><option>テレアポ</option></select></div>
       </div>
       <div class="modal-row">
         <div class="field"><label>提案商材</label><select id="dl-product" onchange="updateDealAmountLabel()"><option value="standard">スタンダード（月額）</option><option value="light">ライト（月額）</option><option value="project">プロジェクト型（一括）</option><option value="training">研修（一括）</option></select></div>
@@ -2711,6 +2711,7 @@ addEventListener('pagehide',persist);
 
 // ── INIT ── //
 restore();
+deals.forEach(d=>{if(d.source==='既存顧客')d.source='既存客';});
 if(DEMO) document.getElementById('demoReset').hidden=false;
 populateStaffSelects();
 buildSidebarStaff();
