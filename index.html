@@ -943,7 +943,10 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; }
         <h1>AI BUDDY ダッシュボード</h1>
         <div class="hw-sub">AI伴走支援サービスの今日の状況です</div>
       </div>
+      <div style="display:flex;align-items:center;gap:8px;">
+      <button id="demoReset" class="hw-date" hidden onclick="if(confirm('デモデータを初期状態に戻しますか？'))resetDemo()" style="cursor:pointer;font-family:var(--font);">デモデータに戻す</button>
       <div class="hw-date"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg><span id="hwDate"></span></div>
+      </div>
     </div>
     <div class="kpi-grid">
       <div class="kpi-card blue"><div class="kpi-ico i1"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg></div><div class="kpi-label">当月 MRR</div><div class="kpi-value" id="homeMRR">¥0</div><div class="kpi-diff" id="homeMRRDiff">—</div></div>
@@ -2212,7 +2215,41 @@ function showToast(msg){
   setTimeout(()=>{t.style.opacity='0';},3200);
 }
 
+// ── 保存（ブラウザの localStorage。デモ版と本番でキーを分ける）── //
+const STORE_KEY = DEMO ? 'aibuddy-portal:demo' : 'aibuddy-portal:prod';
+let storeWarned=false;
+function persist(){
+  try{
+    localStorage.setItem(STORE_KEY, JSON.stringify({v:1,savedAt:new Date().toISOString(),staff:STAFF,clients:clientList,events,nextId,nextClientId}));
+  }catch(err){
+    if(!storeWarned){storeWarned=true;showToast('このブラウザではデータを保存できません（再読み込みで消えます）');}
+  }
+}
+function restore(){
+  try{
+    const raw=localStorage.getItem(STORE_KEY); if(!raw) return;
+    const d=JSON.parse(raw); if(!d||d.v!==1) return;
+    STAFF=d.staff||[];
+    clientList.splice(0,clientList.length,...(d.clients||[]));
+    events=d.events||[];
+    nextId=Math.max(d.nextId||1,...events.map(e=>e.id+1));
+    nextClientId=Math.max(d.nextClientId||100,...clientList.map(c=>c.id+1));
+  }catch(err){}
+}
+function resetDemo(){
+  try{localStorage.removeItem(STORE_KEY);}catch(err){}
+  location.reload();
+}
+// データを変更する操作のあとに自動保存
+['saveStaff','deleteStaff','saveEvent','deleteEvent','deleteSeriesEvent','moveEvent','saveClient','execDeleteClient'].forEach(name=>{
+  const fn=window[name];
+  window[name]=function(...args){const r=fn.apply(this,args);persist();return r;};
+});
+addEventListener('pagehide',persist);
+
 // ── INIT ── //
+restore();
+if(DEMO) document.getElementById('demoReset').hidden=false;
 populateStaffSelects();
 buildSidebarStaff();
 renderHome();
