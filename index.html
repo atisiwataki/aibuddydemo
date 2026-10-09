@@ -1542,6 +1542,22 @@ function render(){
     const isToday=dateStr(d)===dateStr(TODAY);
     html+=`<div class="day-hd${isToday?' today':''}"><span class="dow">${dow}</span><span class="dom">${d.getDate()}</span></div>`;
   });
+  // 時間が重なる予定は横に並べる（col: 列番号 / cols: 列数）
+  const layout={};
+  days.forEach(d=>{
+    const ds=dateStr(d);
+    const list=events.filter(e=>e.date===ds&&(activeStaff==='all'||e.staff===activeStaff)).sort((a,b)=>a.slot-b.slot||b.dur-a.dur);
+    let group=[],groupEnd=-1,colEnds=[];
+    const flush=()=>{group.forEach(e=>layout[e.id].cols=colEnds.length);group=[];colEnds=[];};
+    list.forEach(e=>{
+      if(e.slot>=groupEnd) flush();
+      let c=colEnds.findIndex(end=>end<=e.slot);
+      if(c<0){c=colEnds.length;colEnds.push(0);}
+      colEnds[c]=e.slot+e.dur;
+      layout[e.id]={col:c};group.push(e);groupEnd=Math.max(groupEnd,e.slot+e.dur);
+    });
+    flush();
+  });
   SLOTS.forEach((t,si)=>{
     html+=`<div class="time-lbl">${t.endsWith(':00')?t:''}</div>`;
     days.forEach(d=>{
@@ -1550,7 +1566,9 @@ function render(){
       html+=`<div class="cal-cell${si%2?' alt':''}" data-date="${ds}" data-slot="${si}" onclick="cellClick(event,'${ds}',${si})">`;
       evs.forEach(e=>{
         const h=e.dur*24-4;
-        html+=`<div class="ev ${e.type}" style="top:2px;height:${h}px;" onpointerdown="evPointerDown(event,${e.id})" onclick="event.stopPropagation();if(!suppressEvClick)openDetail(${e.id})">
+        const L=layout[e.id]||{col:0,cols:1};
+        const pos=L.cols>1?`left:calc(${L.col*100/L.cols}% + 2px);right:auto;width:calc(${100/L.cols}% - 4px);`:'';
+        html+=`<div class="ev ${e.type}" style="top:2px;height:${h}px;${pos}" onpointerdown="evPointerDown(event,${e.id})" onclick="event.stopPropagation();if(!suppressEvClick)openDetail(${e.id})">
           <div class="ev-time">${SLOTS[e.slot]}${activeStaff==='all'?' · '+STAFF[e.staff]?.short:''}${e.recur?' ↺':''}</div>
           <div class="ev-name">${e.client}</div>
         </div>`;
