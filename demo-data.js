@@ -5,7 +5,7 @@
 window.DEMO_DATA = {
   // デモは日付を固定（2026/10/9 金）
   // データの版（変えるとデモの保存データが初期化される）
-  version: 6,
+  version: 7,
   today: '2026-10-09',
 
   // 架空の担当者
@@ -157,6 +157,5 @@ window.DEMO_DATA = {
     ],
     // 毎月の新規受注シナリオの初期値（平均月額は確定契約の平均）
     scenario: {aiN:1, aiAvg:280000, aioN:1, aioAvg:62500, prob:50, from:'2027-03', months:12},
-    target: 10000000,
   },
 };

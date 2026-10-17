@@ -985,6 +985,14 @@ details.card[open] > summary::before { transform: rotate(90deg); }
 .dm-day { display: flex; align-items: center; gap: 10px; padding: 6px 0; border-bottom: 1px solid var(--border); }
 .dm-note { font-size: 11px; color: #92400E; background: #FFFBEB; border-radius: 12px; padding: 10px 12px; line-height: 1.7; }
 
+/* 契約目標：グループ見出し・合計 */
+.tt-pills { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+.target-card .tt-pills .pill { font-size: 12px; padding: 3px 10px; }
+.tg-title { grid-column: 1 / -1; display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; margin-top: 4px; padding-bottom: 4px; border-bottom: 1.5px solid rgba(99,102,241,.25); }
+.tg-title b { font-size: 15px; color: var(--fg); }
+.tg-title span { font-size: 12px; color: var(--fg3); }
+.target-grid .tt-total { grid-column: 1 / -1; }
+
 /* KPI は幅に合わせて折り返し */
 .content .kpi-grid { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)) !important; }
 
@@ -1351,7 +1359,7 @@ details.card[open] > summary::before { transform: rotate(90deg); }
   <button class="dcb-btn confirm" onclick="execDeleteClient()">削除する</button>
 </div>
 
-<script src="demo-data.js?v=6" data-demo></script><!-- デモデータ更新時は ?v= も version と同じ番号に上げる（ブラウザキャッシュ対策） -->
+<script src="demo-data.js?v=7" data-demo></script><!-- デモデータ更新時は ?v= も version と同じ番号に上げる（ブラウザキャッシュ対策） -->
 <script>
 // ── DATA ── //
 const DEMO = window.DEMO_DATA || null;  // デモ版のみ demo-data.js が定義
@@ -1363,7 +1371,10 @@ const STAFF_COLORS = [
   {color:'#0284C7',bg:'#E0F2FE'},
 ];
 // プラン別の契約目標（社数）
-const PLAN_TARGETS = { light:20, standard:20 };
+const PLAN_TARGETS = { light:20, standard:20, aio_light:10, aio_standard:10 };
+const TARGET_GROUPS = [{name:'AI伴走',keys:['light','standard']},{name:'AIO',keys:['aio_light','aio_standard']}];
+const targetTotal=()=>Object.values(PLAN_TARGETS).reduce((a,b)=>a+b,0);
+const targetMRR=()=>Object.keys(PLAN_TARGETS).reduce((a,k)=>a+PLAN_TARGETS[k]*PLANS[k].mrr,0);
 const PLANS = {
   light:    { label:'ライト',        color:'#6366F1', bg:'#EEF0FF', mrr:200000 },
   standard: { label:'スタンダード',  color:'#4A7BF5', bg:'#EBF1FF', mrr:300000 },
@@ -2721,34 +2732,40 @@ function renderPipeline(){
 
   <div class="card target-card" style="margin-bottom:16px;">
     <div class="card-header"><span class="card-title">プラン別 契約目標</span>
-      <span class="pill blue">ライト ${PLAN_TARGETS.light}社 ＋ スタンダード ${PLAN_TARGETS.standard}社 ＝ 計${PLAN_TARGETS.light+PLAN_TARGETS.standard}社</span></div>
+      <div class="tt-pills">${TARGET_GROUPS.map(g=>`<span class="pill blue">${g.name}　${g.keys.map(k=>PLANS[k].label.replace('AIO','')+PLAN_TARGETS[k]+'社').join(' ＋ ')}</span>`).join('')}<span class="pill purple">計${targetTotal()}社</span></div></div>
     <div class="card-body">
       <div class="target-grid">
-        ${['light','standard'].map(k=>{
-          const pl=PLANS[k], goal=PLAN_TARGETS[k];
-          const have=clientList.filter(c=>c.plan===k).length;
-          const dl=deals.filter(d=>d.status==='open'&&d.product===k);
-          const hot=dl.filter(d=>d.temp==='hot').length;
-          const left=Math.max(0,goal-have), pct=Math.min(100,Math.round(have/goal*100));
-          const pot=Math.min(left,dl.length);
-          return `<div class="target-tile" style="border-top-color:${pl.color};">
-            <div class="tt-head"><span class="tt-name" style="color:${pl.color};">${pl.label}</span><span class="tt-price">${fmt(pl.mrr)}/月</span></div>
-            <div class="tt-goal">目標 <b>${goal}</b>社</div>
-            <div class="tt-bar"><div style="width:${pct}%;background:${pl.color};"></div></div>
-            <div class="tt-meta"><span>契約中 <b>${have}</b>社（${pct}%）</span><span>あと <b>${left}</b>社</span></div>
-            <div class="tt-meta sub"><span>商談中 ${dl.length}件（うちHOT ${hot}件）</span><span>目標時MRR ${fmt(pl.mrr*goal)}</span></div>
-          </div>`;}).join('')}
-        ${(()=>{const goal=PLAN_TARGETS.light+PLAN_TARGETS.standard;
-          const have=clientList.filter(c=>c.plan==='light'||c.plan==='standard').length;
-          const pct=Math.min(100,Math.round(have/goal*100));
-          const mrrGoal=PLANS.light.mrr*PLAN_TARGETS.light+PLANS.standard.mrr*PLAN_TARGETS.standard;
-          return `<div class="target-tile" style="border-top-color:#6366F1;">
-            <div class="tt-head"><span class="tt-name" style="color:#4F46E5;">合計</span><span class="tt-price">ライト＋スタンダード</span></div>
+        ${(()=>{
+          const tile=k=>{
+            const pl=PLANS[k], goal=PLAN_TARGETS[k];
+            const have=clientList.filter(c=>c.plan===k).length;
+            const dl=deals.filter(d=>d.status==='open'&&d.product===k);
+            const hot=dl.filter(d=>d.temp==='hot').length;
+            const left=Math.max(0,goal-have), pct=Math.min(100,Math.round(have/goal*100));
+            return `<div class="target-tile" style="border-top-color:${pl.color};">
+              <div class="tt-head"><span class="tt-name" style="color:${pl.color};">${pl.label}</span><span class="tt-price">${fmt(pl.mrr)}/月</span></div>
+              <div class="tt-goal">目標 <b>${goal}</b>社</div>
+              <div class="tt-bar"><div style="width:${pct}%;background:${pl.color};"></div></div>
+              <div class="tt-meta"><span>契約中 <b>${have}</b>社（${pct}%）</span><span>あと <b>${left}</b>社</span></div>
+              <div class="tt-meta sub"><span>商談中 ${dl.length}件（うちHOT ${hot}件）</span><span>目標時MRR ${fmt(pl.mrr*goal)}</span></div>
+            </div>`;};
+          const groups=TARGET_GROUPS.map(g=>{
+            const goal=g.keys.reduce((a,k)=>a+PLAN_TARGETS[k],0), have=clientList.filter(c=>g.keys.includes(c.plan)).length;
+            const mg=g.keys.reduce((a,k)=>a+PLAN_TARGETS[k]*PLANS[k].mrr,0);
+            return `<div class="tg-title"><b>${g.name}</b><span>目標 ${goal}社（契約中 ${have}社）　目標時MRR ${fmt(mg)}/月</span></div>`+g.keys.map(tile).join('');
+          }).join('');
+          const goal=targetTotal(), keys=Object.keys(PLAN_TARGETS);
+          const have=clientList.filter(c=>keys.includes(c.plan)).length;
+          const pct=Math.min(100,Math.round(have/goal*100)), mrrGoal=targetMRR();
+          const total=`<div class="target-tile tt-total" style="border-top-color:#6366F1;">
+            <div class="tt-head"><span class="tt-name" style="color:#4F46E5;">合計</span><span class="tt-price">AI伴走＋AIO（${keys.length}プラン）</span></div>
             <div class="tt-goal">目標 <b>${goal}</b>社</div>
             <div class="tt-bar"><div style="width:${pct}%;background:var(--accent-grad);"></div></div>
             <div class="tt-meta"><span>契約中 <b>${have}</b>社（${pct}%）</span><span>あと <b>${Math.max(0,goal-have)}</b>社</span></div>
             <div class="tt-meta sub"><span>目標達成時 MRR ${fmt(mrrGoal)}</span><span>年額 ${fmt(mrrGoal*12)}</span></div>
-          </div>`;})()}
+          </div>`;
+          return groups+total;
+        })()}
       </div>
       <div class="tt-note">契約中＝顧問リストに登録されたお客様の社数。商談を「受注」にすると自動で増えます。</div>
     </div>
@@ -2909,7 +2926,7 @@ const OL_COL={base:'#6366F1',pros:'#A5B4FC',scen:'#14B8A6'};
 const OL_LINE={ai:'AI運用',aio:'AIO運用'};
 let olCfg=null, olStore=null, olFlash='';
 function olData(){ return olStore || (DEMO&&DEMO.outlook) || null; }
-function olTarget(O){ return O.target || (PLAN_TARGETS.light*PLANS.light.mrr+PLAN_TARGETS.standard*PLANS.standard.mrr); }
+function olTarget(O){ return O.target || targetMRR(); }
 function olDefaults(O){
   if(O.scenario) return {...O.scenario};
   const avg=(ln,def)=>{const l=O.contracts.filter(c=>c.line===ln);return l.length?Math.round(l.reduce((a,c)=>a+c.amount,0)/l.length):def;};
