@@ -5,7 +5,7 @@
 window.DEMO_DATA = {
   // デモは日付を固定（2026/10/9 金）
   // データの版（変えるとデモの保存データが初期化される）
-  version: 5,
+  version: 6,
   today: '2026-10-09',
 
   // 架空の担当者
@@ -129,4 +129,34 @@ window.DEMO_DATA = {
     {id:15,company:'有限会社まるやま商店',contact:'店主 丸山様',industry:'小売',staff:1,temp:'cool',stage:1,source:'テレアポ',product:'light',amount:200000,closeMonth:'',nextAction:'',nextDate:'',memo:'予算見送り',status:'lost',closedAt:'2026-09-18'}
   ],
   nextDealId: 16,
+
+  // 今後の売上見通し（19期 売上管理表「運用売上」より。社名は匿名化）
+  // contracts = 確定（2026年11月開始）／ prospects = 見込み案件（金額・開始月は仮置き）
+  outlook: {
+    start: '2026-11',
+    contracts: [
+      {co:'A社', line:'ai',  plan:'スタンダード', amount:300000, start:'2026-11'},
+      {co:'B社', line:'ai',  plan:'スタンダード', amount:300000, start:'2026-11'},
+      {co:'C社（拠点1）', line:'ai',  plan:'スタンダード', amount:300000, start:'2026-11'},
+      {co:'C社（拠点2）', line:'ai',  plan:'スタンダード', amount:300000, start:'2026-11'},
+      {co:'D社', line:'ai',  plan:'スタンダード', amount:200000, start:'2026-11'},
+      {co:'A社', line:'aio', plan:'ライト',       amount:50000,  start:'2026-11'},
+      {co:'B社', line:'aio', plan:'ライト',       amount:50000,  start:'2026-11'},
+      {co:'C社', line:'aio', plan:'スタンダード', amount:100000, start:'2026-11'},
+      {co:'D社', line:'aio', plan:'スタンダード', amount:50000,  start:'2026-11'},
+    ],
+    prospects: [
+      {co:'E社', line:'ai',  plan:'スタンダード', amount:300000, start:'2026-12'},
+      {co:'F社', line:'ai',  plan:'スタンダード', amount:300000, start:'2027-01'},
+      {co:'G社', line:'ai',  plan:'スタンダード', amount:300000, start:'2027-01'},
+      {co:'H社', line:'ai',  plan:'スタンダード', amount:300000, start:'2027-02'},
+      {co:'I社', line:'ai',  plan:'スタンダード', amount:300000, start:'2027-02'},
+      {co:'E社', line:'aio', plan:'スタンダード', amount:50000,  start:'2026-12'},
+      {co:'J社', line:'aio', plan:'スタンダード', amount:50000,  start:'2027-01'},
+      {co:'K社', line:'aio', plan:'スタンダード', amount:50000,  start:'2027-01'},
+    ],
+    // 毎月の新規受注シナリオの初期値（平均月額は確定契約の平均）
+    scenario: {aiN:1, aiAvg:280000, aioN:1, aioAvg:62500, prob:50, from:'2027-03', months:12},
+    target: 10000000,
+  },
 };

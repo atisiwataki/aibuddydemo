@@ -233,7 +233,7 @@ html,body { height: 100%; font-family: var(--font); color: var(--fg); background
 .page-body.no-pad { padding: 0; }
 
 /* page wrapper divs must be flex containers so inner .page-body can flex:1 */
-#pageDashboard, #pageClients, #pageSales, #pageSchedule, #pagePipeline {
+#pageDashboard, #pageClients, #pageSales, #pageSchedule, #pagePipeline, #pageOutlook {
   flex: 1; display: flex; flex-direction: column; min-height: 0; overflow: hidden;
 }
 
@@ -954,6 +954,18 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; }
 .target-card .tt-meta > span { white-space: nowrap; }
 .target-card .target-grid { grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
 
+
+/* 売上見通し */
+.ol-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px 16px; }
+.ol-f { display: flex; flex-direction: column; gap: 4px; }
+.ol-f label { font-size: 11px; font-weight: 700; color: var(--fg3); }
+.ol-in { display: flex; align-items: center; gap: 6px; }
+.ol-in input, .ol-in select { flex: 1; min-width: 0; height: 36px; border: 1.5px solid var(--border); border-radius: 10px; padding: 0 10px; font-family: var(--font); font-size: 13px; color: var(--fg); background: rgba(255,255,255,.9); outline: none; }
+.ol-in input:focus, .ol-in select:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(99,102,241,.15); }
+.ol-in span { font-size: 11px; color: var(--fg3); white-space: nowrap; }
+.ol-legend { display: flex; gap: 12px; flex-wrap: wrap; font-size: 11px; color: var(--fg2); }
+.ol-legend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; }
+
 /* KPI は幅に合わせて折り返し */
 .content .kpi-grid { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)) !important; }
 
@@ -992,6 +1004,7 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; }
     <button class="nav-item"        id="nav-clients"    onclick="switchPage('clients')">   <span class="ni-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg></span> 顧問リスト</button>
     <button class="nav-item"        id="nav-pipeline"   onclick="switchPage('pipeline')">  <span class="ni-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z"/></svg></span> 営業管理</button>
     <button class="nav-item"        id="nav-sales"      onclick="switchPage('sales')">     <span class="ni-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg></span> 売上管理</button>
+    <button class="nav-item"        id="nav-outlook"    onclick="switchPage('outlook')">  <span class="ni-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 6-7"/></svg></span> 売上見通し</button>
   </div>
 
   <div class="sidebar-staff" id="sidebarStaff">
@@ -1102,6 +1115,11 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; }
   </div>
 
   <!-- ─── SALES ─── -->
+  <!-- ─── OUTLOOK（売上見通し・デモ） ─── -->
+  <div id="pageOutlook" style="display:none;">
+    <div class="page-body" id="outlookInner"></div>
+  </div>
+
   <div id="pageSales" style="display:none;">
     <div class="page-body" id="salesInner"></div>
   </div>
@@ -1304,7 +1322,7 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; }
   <button class="dcb-btn confirm" onclick="execDeleteClient()">削除する</button>
 </div>
 
-<script src="demo-data.js?v=5" data-demo></script><!-- デモデータ更新時は ?v= も version と同じ番号に上げる（ブラウザキャッシュ対策） -->
+<script src="demo-data.js?v=6" data-demo></script><!-- デモデータ更新時は ?v= も version と同じ番号に上げる（ブラウザキャッシュ対策） -->
 <script>
 // ── DATA ── //
 const DEMO = window.DEMO_DATA || null;  // デモ版のみ demo-data.js が定義
@@ -1621,8 +1639,8 @@ function buildSidebarStaff(){
 let currentPage='home';
 function switchPage(page){
   currentPage=page;
-  const pages=['home','dashboard','schedule','clients','pipeline','sales'];
-  const labels={'home':'ホーム','dashboard':'ダッシュボード','schedule':'スケジュール','clients':'顧問リスト','pipeline':'営業管理','sales':'売上管理'};
+  const pages=['home','dashboard','schedule','clients','pipeline','sales','outlook'];
+  const labels={'home':'ホーム','dashboard':'ダッシュボード','schedule':'スケジュール','clients':'顧問リスト','pipeline':'営業管理','sales':'売上管理','outlook':'売上見通し'};
   document.querySelectorAll('.nav-item').forEach(el=>{
     el.classList.toggle('active', el.id==='nav-'+page);
   });
@@ -1648,6 +1666,7 @@ function switchPage(page){
   if(page==='clients') renderClients();
   if(page==='sales')   renderSales();
   if(page==='pipeline') renderPipeline();
+  if(page==='outlook') renderOutlook();
   if(page==='home')    renderHome();
   if(page==='dashboard') renderDashboard();
 }
@@ -2119,7 +2138,7 @@ function renderSales(){
   <div class="obj-header">
     <div class="obj-icon" style="background:var(--amb-bg);color:var(--amb);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="18" y="3" width="4" height="18" rx="1"/><rect x="10" y="8" width="4" height="13" rx="1"/><rect x="2" y="13" width="4" height="8" rx="1"/></svg></div>
     <div class="obj-meta"><div class="obj-label">Revenue Management</div><div class="obj-name">売上管理</div><div class="obj-sub">${TODAY.getFullYear()}年${TODAY.getMonth()+1}月現在 · AI伴走サービス</div></div>
-    <div class="obj-badges"><span class="pill green">MRR ${fmt(totalMRR)}</span><span class="pill blue">▲ ${fmt(diff)} 前月比</span></div>
+    <div class="obj-badges">${(DEMO&&DEMO.outlook)?`<button class="topbar-btn secondary" style="height:28px;font-size:11px;" onclick="switchPage('outlook')">売上見通しを見る ›</button>`:''}<span class="pill green">MRR ${fmt(totalMRR)}</span><span class="pill blue">▲ ${fmt(diff)} 前月比</span></div>
   </div>
 
   <div class="kpi-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:16px;">
@@ -2834,6 +2853,141 @@ function scheduleDeal(){
   openAddModal();
 }
 
+
+// ── 売上見通し（デモ）── //
+const OL_COL={base:'#6366F1',pros:'#A5B4FC',scen:'#14B8A6'};
+const OL_LINE={ai:'AI運用',aio:'AIO運用'};
+let olCfg=null;
+function ymAdd(ym,n){const [y,m]=ym.split('-').map(Number);const d=new Date(y,m-1+n,1);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');}
+function ymDiff(a,b){const [y1,m1]=a.split('-').map(Number),[y2,m2]=b.split('-').map(Number);return (y2-y1)*12+(m2-m1);}
+const olMan=v=>Math.round(v/10000).toLocaleString('ja-JP')+'万';
+function olCompute(cfg,months){
+  const O=DEMO.outlook, rows=[];
+  for(let i=0;i<months;i++){
+    const ym=ymAdd(O.start,i);
+    const sum=(arr,ln)=>arr.filter(c=>c.start<=ym&&(!ln||c.line===ln)).reduce((s,c)=>s+c.amount,0);
+    const k=ymDiff(cfg.from,ym)+1;            // 新規受注を開始してから何か月分たまったか
+    const n=Math.max(0,k);
+    const scenAi=n*cfg.aiN*cfg.aiAvg, scenAio=n*cfg.aioN*cfg.aioAvg;
+    const base=sum(O.contracts), pros=sum(O.prospects)*cfg.prob/100, scen=scenAi+scenAio;
+    rows.push({ym,base,pros,scen,total:base+pros+scen,
+      ai:sum(O.contracts,'ai')+sum(O.prospects,'ai')*cfg.prob/100+scenAi,
+      aio:sum(O.contracts,'aio')+sum(O.prospects,'aio')*cfg.prob/100+scenAio,
+      newCnt:n*(cfg.aiN+cfg.aioN)});
+  }
+  return rows;
+}
+function olReach(cfg,target){
+  const r=olCompute(cfg,72); const i=r.findIndex(x=>x.total>=target);
+  return i<0?null:{ym:r[i].ym,after:i};
+}
+function olChart(rows,target){
+  const W=760,H=300,PL=56,PR=12,PT=26,PB=38, n=rows.length;
+  const maxT=Math.max(...rows.map(r=>r.total));
+  const showT=target<=maxT*2.5;
+  let ymax=Math.max(maxT*1.16,showT?target*1.06:0);
+  const step=ymax>8e6?2e6:ymax>4e6?1e6:ymax>2e6?5e5:2e5;
+  ymax=Math.ceil(ymax/step)*step;
+  const iw=W-PL-PR, ih=H-PT-PB, bw=Math.min(40,iw/n*.62), gx=i=>PL+iw/n*(i+.5), gy=v=>PT+ih*(1-v/ymax);
+  let g='';
+  for(let v=0;v<=ymax+1;v+=step){g+=`<line x1="${PL}" y1="${gy(v)}" x2="${W-PR}" y2="${gy(v)}" stroke="#E4E8F5" stroke-width="1"/><text x="${PL-6}" y="${gy(v)+3}" text-anchor="end" font-size="9.5" fill="#8A90A8">${v===0?'0':olMan(v)}</text>`;}
+  rows.forEach((r,i)=>{
+    let y0=0;const seg=(v,c)=>{if(v<=0)return '';const h=ih*v/ymax,y=gy(y0+v);y0+=v;return `<rect x="${gx(i)-bw/2}" y="${y}" width="${bw}" height="${h}" fill="${c}"/>`;};
+    g+=seg(r.base,OL_COL.base)+seg(r.pros,OL_COL.pros)+seg(r.scen,OL_COL.scen);
+    g+=`<text x="${gx(i)}" y="${gy(r.total)-5}" text-anchor="middle" font-size="9.5" font-weight="700" fill="#2B2F55">${olMan(r.total)}</text>`;
+    const mo=+r.ym.slice(5);
+    g+=`<text x="${gx(i)}" y="${H-PB+14}" text-anchor="middle" font-size="9.5" fill="#5A6078">${mo}月</text>`;
+    if(i===0||mo===1) g+=`<text x="${gx(i)}" y="${H-PB+27}" text-anchor="middle" font-size="9" fill="#8A90A8">${r.ym.slice(0,4)}</text>`;
+  });
+  if(showT) g+=`<line x1="${PL}" y1="${gy(target)}" x2="${W-PR}" y2="${gy(target)}" stroke="#EC4899" stroke-width="1.4" stroke-dasharray="5 4"/><text x="${W-PR}" y="${gy(target)-5}" text-anchor="end" font-size="9.5" font-weight="700" fill="#DB2777">目標 ${olMan(target)}/月</text>`;
+  return `<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;display:block;">${g}</svg>`;
+}
+function olRead(){
+  const v=id=>Math.max(0,parseFloat(document.getElementById(id).value)||0);
+  olCfg={aiN:v('ol-aiN'),aiAvg:v('ol-aiAvg'),aioN:v('ol-aioN'),aioAvg:v('ol-aioAvg'),prob:Math.min(100,v('ol-prob')),
+    from:document.getElementById('ol-from').value||DEMO.outlook.scenario.from,months:parseInt(document.getElementById('ol-months').value)||12};
+  olUpdate();
+}
+function olReset(){
+  olCfg={...DEMO.outlook.scenario};
+  const set=(id,x)=>document.getElementById(id).value=x;
+  set('ol-aiN',olCfg.aiN);set('ol-aiAvg',olCfg.aiAvg);set('ol-aioN',olCfg.aioN);set('ol-aioAvg',olCfg.aioAvg);
+  set('ol-prob',olCfg.prob);set('ol-from',olCfg.from);set('ol-months',olCfg.months);olUpdate();
+}
+function olUpdate(){
+  const O=DEMO.outlook, rows=olCompute(olCfg,olCfg.months), last=rows[rows.length-1], first=rows[0];
+  const total=rows.reduce((s,r)=>s+r.total,0);
+  const reach=olReach(olCfg,O.target);
+  const mLabel=ym=>`${ym.slice(0,4)}年${+ym.slice(5)}月`;
+  document.getElementById('olResult').innerHTML=`
+  <div class="kpi-grid" style="margin-bottom:16px;">
+    <div class="kpi-card blue"><div class="kpi-label">確定MRR（${mLabel(first.ym)}〜）</div><div class="kpi-value">${fmt(first.base)}</div><div class="kpi-diff">AI運用 ${fmt(O.contracts.filter(c=>c.line==='ai').reduce((s,c)=>s+c.amount,0))} ／ AIO運用 ${fmt(O.contracts.filter(c=>c.line==='aio').reduce((s,c)=>s+c.amount,0))}</div></div>
+    <div class="kpi-card purple"><div class="kpi-label">${olCfg.months}か月後のMRR（${mLabel(last.ym)}）</div><div class="kpi-value">${fmt(Math.round(last.total))}</div><div class="kpi-diff">確定の <b>${(last.total/first.base).toFixed(1)}倍</b> ／ 年換算 ${fmt(Math.round(last.total*12))}</div></div>
+    <div class="kpi-card green"><div class="kpi-label">${olCfg.months}か月の売上見込み</div><div class="kpi-value">${fmt(Math.round(total))}</div><div class="kpi-diff">月平均 ${fmt(Math.round(total/rows.length))}</div></div>
+    <div class="kpi-card amber"><div class="kpi-label">目標 ${fmt(O.target)}/月に到達</div><div class="kpi-value" style="font-size:18px;">${reach?mLabel(reach.ym):'6年以内に未到達'}</div><div class="kpi-diff">${reach?`${reach.after}か月後（この条件のまま増やした場合）`:'受注ペースの見直しが必要です'}</div></div>
+  </div>
+  <div class="card" style="margin-bottom:16px;">
+    <div class="card-header"><span class="card-title">月次MRRの見通し（月額売上）</span>
+      <div class="ol-legend"><span><i style="background:${OL_COL.base}"></i>確定契約</span><span><i style="background:${OL_COL.pros}"></i>見込み案件（確度${olCfg.prob}%）</span><span><i style="background:${OL_COL.scen}"></i>毎月の新規受注（シナリオ）</span></div></div>
+    <div class="card-body">${olChart(rows,O.target)}</div>
+  </div>
+  <div class="card" style="margin-bottom:16px;">
+    <div class="card-header" style="padding:14px 18px 8px;"><span class="card-title">月別の内訳</span><span class="section-count">${rows.length}か月</span></div>
+    <div class="table-wrap"><table class="dt">
+      <thead><tr><th>月</th><th class="num">確定</th><th class="num">見込み案件</th><th class="num">新規受注</th><th class="num">MRR合計</th><th class="num">前月差</th><th class="num">うちAI運用</th><th class="num">うちAIO運用</th></tr></thead>
+      <tbody>${rows.map((r,i)=>{const diff=i?r.total-rows[i-1].total:null;return `<tr${i===rows.length-1?' style="background:var(--primary-bg);font-weight:700;"':''}>
+        <td style="font-family:var(--mono);font-size:11px;">${r.ym.replace('-','/')}</td>
+        <td class="num">${fmt(r.base)}</td><td class="num" style="color:var(--fg3);">${r.pros?fmt(Math.round(r.pros)):'—'}</td><td class="num" style="color:#0F766E;">${r.scen?fmt(Math.round(r.scen)):'—'}</td>
+        <td class="num">${fmt(Math.round(r.total))}</td>
+        <td class="num" style="color:${diff>0?'var(--grn)':'var(--fg3)'};">${diff==null?'—':(diff>0?'▲ ':'')+fmt(Math.round(diff))}</td>
+        <td class="num">${fmt(Math.round(r.ai))}</td><td class="num">${fmt(Math.round(r.aio))}</td></tr>`;}).join('')}</tbody>
+    </table></div>
+  </div>`;
+}
+function renderOutlook(){
+  const O=DEMO&&DEMO.outlook; if(!O){document.getElementById('outlookInner').innerHTML='<div class="card"><div class="card-body">売上見通しのデータがありません。</div></div>';return;}
+  if(!olCfg) olCfg={...O.scenario};
+  const c=olCfg;
+  const confirmedSum=O.contracts.reduce((s,x)=>s+x.amount,0), prosSum=O.prospects.reduce((s,x)=>s+x.amount,0);
+  const field=(id,label,val,step,suffix)=>`<div class="ol-f"><label>${label}</label><div class="ol-in"><input id="${id}" type="number" min="0" step="${step}" value="${val}" oninput="olRead()"><span>${suffix}</span></div></div>`;
+  const tr=(x,st)=>`<tr><td style="font-weight:600;">${x.co}</td><td>${OL_LINE[x.line]}</td><td>${x.plan}</td><td class="num">${fmt(x.amount)}</td><td style="font-family:var(--mono);font-size:11px;">${x.start.replace('-','/')}</td><td class="center"><span class="pill ${st==='c'?'green':'amber'}">${st==='c'?'確定':'見込み（仮置き）'}</span></td></tr>`;
+  document.getElementById('outlookInner').innerHTML=`
+  <div class="obj-header">
+    <div class="obj-icon" style="background:#E0E7FF;color:#4338CA;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 6-7"/></svg></div>
+    <div class="obj-meta"><div class="obj-label">Revenue Outlook</div><div class="obj-name">売上見通し</div><div class="obj-sub">毎月の新規受注を重ねたときの、月額売上（MRR）の伸びを見る</div></div>
+    <div class="obj-badges"><span class="pill green">確定 ${fmt(confirmedSum)}/月</span><span class="pill amber">見込み案件 ${fmt(prosSum)}/月</span></div>
+  </div>
+
+  <div class="card" style="margin-bottom:16px;">
+    <div class="card-header"><span class="card-title">シミュレーション条件</span><span class="note" style="font-size:11px;color:var(--fg3);">数字を変えると、下のグラフと表がすぐに変わります</span></div>
+    <div class="card-body">
+      <div class="ol-grid">
+        ${field('ol-aiN','AI運用　毎月の新規受注',c.aiN,1,'件/月')}
+        ${field('ol-aiAvg','AI運用　平均月額',c.aiAvg,10000,'円')}
+        ${field('ol-aioN','AIO運用　毎月の新規受注',c.aioN,1,'件/月')}
+        ${field('ol-aioAvg','AIO運用　平均月額',c.aioAvg,5000,'円')}
+        ${field('ol-prob','見込み案件の受注確度',c.prob,10,'%')}
+        <div class="ol-f"><label>新規受注の開始月</label><div class="ol-in"><input id="ol-from" type="month" value="${c.from}" oninput="olRead()"></div></div>
+        <div class="ol-f"><label>表示する期間</label><div class="ol-in"><select id="ol-months" onchange="olRead()"><option value="12"${c.months===12?' selected':''}>12か月</option><option value="18"${c.months===18?' selected':''}>18か月</option><option value="24"${c.months===24?' selected':''}>24か月</option></select></div></div>
+        <div class="ol-f" style="justify-content:flex-end;"><button class="topbar-btn secondary" style="height:34px;" onclick="olReset()">初期値に戻す</button></div>
+      </div>
+      <div style="font-size:10.5px;color:var(--fg4);margin-top:8px;">平均月額の初期値は確定契約の平均（AI運用 ${fmt(280000)}／AIO運用 ${fmt(62500)}）。新規受注は「開始月」から毎月積み上がり、解約は考慮していません。</div>
+    </div>
+  </div>
+
+  <div id="olResult"></div>
+
+  <div class="card">
+    <div class="card-header" style="padding:14px 18px 8px;"><span class="card-title">もとになっている契約・案件</span><span class="section-count">確定 ${O.contracts.length}件 ／ 見込み ${O.prospects.length}件</span></div>
+    <div class="table-wrap"><table class="dt">
+      <thead><tr><th>お客様</th><th>ライン</th><th>プラン</th><th class="num">月額</th><th>開始月</th><th class="center">状態</th></tr></thead>
+      <tbody>${O.contracts.map(x=>tr(x,'c')).join('')}${O.prospects.map(x=>tr(x,'p')).join('')}</tbody>
+    </table></div>
+    <div style="padding:10px 18px 14px;font-size:10.5px;color:var(--fg3);line-height:1.7;">出典：19期 売上管理表（運用売上）。お客様名は匿名化しています。見込み案件の金額（標準単価）と開始月は仮置きです（I社のみ元データに「2月から」の記載あり）。</div>
+  </div>`;
+  olUpdate();
+}
+
 // ── 保存（ブラウザの localStorage。デモ版と本番でキーを分ける）── //
 const STORE_KEY = DEMO ? 'aibuddy-portal:demo:'+(DEMO.version||1) : 'aibuddy-portal:prod';  // デモはデータ版が変わると初期化
 let storeWarned=false, resetting=false;
@@ -2881,6 +3035,7 @@ addEventListener('storage',ev=>{
 restore();
 deals.forEach(d=>{if(d.source==='既存顧客')d.source='既存客';});
 if(DEMO) document.getElementById('demoReset').hidden=false;
+if(!(DEMO&&DEMO.outlook)) document.getElementById('nav-outlook').style.display='none';
 populateStaffSelects();
 buildSidebarStaff();
 renderHome();
