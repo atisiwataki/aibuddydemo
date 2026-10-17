@@ -972,6 +972,19 @@ details.card[open] > summary::before { transform: rotate(90deg); }
 .ol-legend { display: flex; gap: 12px; flex-wrap: wrap; font-size: 11px; color: var(--fg2); }
 .ol-legend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; }
 
+/* データの保存・バックアップ */
+.data-banner { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; background: #FFFBEB; border: 1px solid #FDE68A; color: #92400E; border-radius: 14px; padding: 10px 14px; font-size: 12px; margin-bottom: 16px; line-height: 1.6; }
+.data-banner span { flex: 1; min-width: 200px; }
+.dm-sec { border: 1px solid var(--border); border-radius: 14px; padding: 12px 14px; background: rgba(255,255,255,.7); }
+.dm-h { font-size: 12.5px; font-weight: 700; color: var(--fg); margin-bottom: 6px; }
+.dm-p { font-size: 11.5px; color: var(--fg3); line-height: 1.7; margin-bottom: 8px; }
+.dm-btns { display: flex; gap: 8px; flex-wrap: wrap; }
+.dm-grid { display: grid; grid-template-columns: 130px 1fr; gap: 6px 10px; font-size: 12px; align-items: center; }
+.dm-grid > span:nth-child(odd) { color: var(--fg3); font-weight: 600; }
+.dm-days { display: flex; flex-direction: column; max-height: 180px; overflow-y: auto; }
+.dm-day { display: flex; align-items: center; gap: 10px; padding: 6px 0; border-bottom: 1px solid var(--border); }
+.dm-note { font-size: 11px; color: #92400E; background: #FFFBEB; border-radius: 12px; padding: 10px 12px; line-height: 1.7; }
+
 /* KPI は幅に合わせて折り返し */
 .content .kpi-grid { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)) !important; }
 
@@ -1013,6 +1026,7 @@ details.card[open] > summary::before { transform: rotate(90deg); }
     <button class="nav-item"        id="nav-outlook"    onclick="switchPage('outlook')">  <span class="ni-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 6-7"/></svg></span> 売上見通し</button>
   </div>
 
+  <div style="padding:0 10px 8px;"><button class="nav-item" id="nav-data" onclick="openDataModal()" style="font-size:12px;"><span class="ni-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></span> 保存・バックアップ</button></div>
   <div class="sidebar-staff" id="sidebarStaff">
     <div class="sidebar-staff-label" style="display:flex;align-items:center;justify-content:space-between;">
       担当者・チーム
@@ -1057,6 +1071,7 @@ details.card[open] > summary::before { transform: rotate(90deg); }
 
   <!-- ─── HOME ─── -->
   <div id="pageHome" class="page-body">
+    <div id="dataBanner"></div>
     <div class="home-welcome">
       <div>
         <h1>AI BUDDY ダッシュボード</h1>
@@ -1269,6 +1284,14 @@ details.card[open] > summary::before { transform: rotate(90deg); }
       <button class="mf-btn" onclick="closeStaffModal()">キャンセル</button>
       <button class="mf-btn green" id="sfSaveBtn" onclick="saveStaff()">追加する</button>
     </div>
+  </div>
+</div>
+
+<!-- DATA / BACKUP MODAL -->
+<div class="overlay" id="dataOverlay" hidden onclick="if(event.target===this)closeDataModal()">
+  <div class="modal" style="max-width:600px;">
+    <div class="modal-header">データの保存・バックアップ <button class="modal-close" onclick="closeDataModal()">✕</button></div>
+    <div class="modal-body" id="dataBody" style="max-height:74vh;overflow-y:auto;gap:16px;"></div>
   </div>
 </div>
 
@@ -1679,6 +1702,7 @@ function switchPage(page){
 
 // ── HOME ── //
 function renderHome(){
+  renderDataBanner();
   const hw=document.getElementById('hwDate');
   if(hw) hw.textContent=`${TODAY.getFullYear()}年${TODAY.getMonth()+1}月${TODAY.getDate()}日（${'日月火水木金土'[TODAY.getDay()]}）`;
   const cnt=clientList.length;
@@ -3132,13 +3156,39 @@ function renderOutlook(){
 // ── 保存（ブラウザの localStorage。デモ版と本番でキーを分ける）── //
 const STORE_KEY = DEMO ? 'aibuddy-portal:demo:'+(DEMO.version||1) : 'aibuddy-portal:prod';  // デモはデータ版が変わると初期化
 let storeWarned=false, resetting=false;
+const ENV = DEMO ? 'demo' : 'prod';
+function snapshot(){
+  return {v:1,app:'aibuddy-portal',env:ENV,savedAt:new Date().toISOString(),staff:STAFF,clients:clientList,events,nextId,nextClientId,deals,nextDealId,outlook:olStore};
+}
+function hasData(){ return !!(STAFF.length||clientList.length||events.length||deals.length||olStore); }
+
+// ── IndexedDB（localStorage とは別の領域にも同じ内容を持つ） ──
+function idbOpen(){return new Promise((res,rej)=>{const r=indexedDB.open('aibuddy-portal',1);r.onupgradeneeded=()=>r.result.createObjectStore('kv');r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error);});}
+async function idbPut(k,v){try{const db=await idbOpen();await new Promise((res,rej)=>{const tx=db.transaction('kv','readwrite');tx.objectStore('kv').put(v,k);tx.oncomplete=res;tx.onerror=()=>rej(tx.error);});}catch(e){}}
+async function idbGet(k){try{const db=await idbOpen();return await new Promise((res,rej)=>{const q=db.transaction('kv').objectStore('kv').get(k);q.onsuccess=()=>res(q.result);q.onerror=()=>rej(q.error);});}catch(e){return undefined;}}
+async function idbDel(k){try{const db=await idbOpen();await new Promise((res,rej)=>{const tx=db.transaction('kv','readwrite');tx.objectStore('kv').delete(k);tx.oncomplete=res;tx.onerror=()=>rej(tx.error);});}catch(e){}}
+
+// ── 日別の自動バックアップ（このブラウザの中に最大14日分） ──
+const DAY_PREFIX = STORE_KEY+':day:';
+function dayKeys(){ const ks=[]; for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i); if(k&&k.startsWith(DAY_PREFIX)) ks.push(k);} return ks.sort().reverse(); }
+function saveDaySnapshot(json){
+  try{
+    const d=new Date(), ymd=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+    localStorage.setItem(DAY_PREFIX+ymd,json);
+    dayKeys().slice(14).forEach(k=>localStorage.removeItem(k));
+  }catch(e){}
+}
+
 function persist(){
   if(resetting) return;  // リセット中は書き戻さない
+  let json=null;
   try{
-    localStorage.setItem(STORE_KEY, JSON.stringify({v:1,savedAt:new Date().toISOString(),staff:STAFF,clients:clientList,events,nextId,nextClientId,deals,nextDealId,outlook:olStore}));
+    json=JSON.stringify(snapshot());
+    localStorage.setItem(STORE_KEY,json);
   }catch(err){
     if(!storeWarned){storeWarned=true;showToast('このブラウザではデータを保存できません（再読み込みで消えます）');}
   }
+  if(json){ saveDaySnapshot(json); idbPut('snap:'+STORE_KEY,json); fsSchedule(json); }
 }
 function restore(){
   try{
@@ -3154,10 +3204,157 @@ function restore(){
     olStore=d.outlook||null;
   }catch(err){}
 }
-function resetDemo(){
+async function resetDemo(){
   resetting=true;
-  try{localStorage.removeItem(STORE_KEY);}catch(err){}
+  await idbDel('snap:'+STORE_KEY);
+  try{ localStorage.removeItem(STORE_KEY); dayKeys().forEach(k=>localStorage.removeItem(k)); }catch(err){}
   location.reload();
+}
+
+// ── 自動保存ファイル（Chrome など File System Access API 対応のブラウザのみ） ──
+const FSA = !!(window.showSaveFilePicker && window.showOpenFilePicker);
+let fsHandle=null, fsState='none', fsTimer=null, fsLastWrite=0, fsErr='';   // none | ready | needsPermission | error
+const FS_TYPES=[{description:'AI BUDDY データ（JSON）',accept:{'application/json':['.json']}}];
+async function fsInit(){
+  if(!FSA) return;
+  const h=await idbGet('fsHandle:'+STORE_KEY); if(!h) return;
+  fsHandle=h;
+  try{ fsState=(await h.queryPermission({mode:'readwrite'}))==='granted'?'ready':'needsPermission'; }catch(e){ fsState='needsPermission'; }
+}
+function fsSchedule(json){ if(!fsHandle||fsState!=='ready') return; clearTimeout(fsTimer); fsTimer=setTimeout(()=>fsWrite(json),800); }
+async function fsWrite(json){
+  try{ const w=await fsHandle.createWritable(); await w.write(json||JSON.stringify(snapshot(),null,2)); await w.close(); fsLastWrite=Date.now(); fsErr=''; }
+  catch(e){ fsState='error'; fsErr=String((e&&e.message)||e); }
+  renderDataBanner(); if(!document.getElementById('dataOverlay').hidden) renderDataModal();
+}
+async function fsCreate(){
+  try{
+    fsHandle=await showSaveFilePicker({suggestedName:`aibuddy-data-${ENV}.json`,types:FS_TYPES});
+    fsState='ready'; await idbPut('fsHandle:'+STORE_KEY,fsHandle); await fsWrite(JSON.stringify(snapshot(),null,2));
+    showToast('自動保存ファイルを設定しました（変更のたびに保存されます）');
+  }catch(e){ if(e&&e.name!=='AbortError') showToast('ファイルを設定できませんでした'); }
+}
+async function fsOpen(){
+  try{
+    const [h]=await showOpenFilePicker({types:FS_TYPES}); const text=await (await h.getFile()).text();
+    await applyBackupText(text,{fsHandle:h,label:'自動保存ファイル'});
+  }catch(e){ if(e&&e.name!=='AbortError') showToast('ファイルを開けませんでした'); }
+}
+async function fsPermit(){
+  try{ fsState=(await fsHandle.requestPermission({mode:'readwrite'}))==='granted'?'ready':'needsPermission'; if(fsState==='ready') await fsWrite(JSON.stringify(snapshot(),null,2)); }catch(e){ fsState='error'; }
+  renderDataBanner(); if(!document.getElementById('dataOverlay').hidden) renderDataModal();
+}
+async function fsStop(){ fsHandle=null; fsState='none'; await idbDel('fsHandle:'+STORE_KEY); renderDataBanner(); renderDataModal(); }
+
+// ── バックアップ（書き出し・コピー・貼り付け復元・ファイル読み込み・日別復元） ──
+function backupName(){ const d=new Date(),z=n=>String(n).padStart(2,'0'); return `aibuddy-backup-${ENV}-${d.getFullYear()}${z(d.getMonth()+1)}${z(d.getDate())}-${z(d.getHours())}${z(d.getMinutes())}.json`; }
+function markBackup(){ try{localStorage.setItem(STORE_KEY+':lastBackup',String(Date.now()));}catch(e){} renderDataBanner(); }
+function exportBackup(){
+  const json=JSON.stringify(snapshot(),null,2), a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([json],{type:'application/json'})); a.download=backupName();
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href),3000);
+  markBackup(); showToast('バックアップファイルを書き出しました'); if(!document.getElementById('dataOverlay').hidden) renderDataModal();
+}
+async function copyBackup(){
+  const json=JSON.stringify(snapshot(),null,2);
+  try{ await navigator.clipboard.writeText(json); markBackup(); showToast('バックアップをコピーしました（メモ帳などに貼り付けて保管できます）'); }
+  catch(e){ const t=document.getElementById('dm-export-text'); t.hidden=false; t.value=json; t.select(); showToast('下の欄を選択してコピーしてください'); }
+  if(!document.getElementById('dataOverlay').hidden) renderDataModal();
+}
+async function applyBackupText(text,opt){
+  opt=opt||{}; let d;
+  try{ d=JSON.parse(text); }catch(e){ showToast('読み込めませんでした（バックアップの内容ではありません）'); return false; }
+  if(!d||d.v!==1||!Array.isArray(d.staff)||!Array.isArray(d.clients)||!Array.isArray(d.events)){ showToast('読み込めませんでした（バックアップの形式が違います）'); return false; }
+  if(d.env&&d.env!==ENV&&!confirm(`これは「${d.env==='demo'?'デモ版':'本番'}」のバックアップです。${ENV==='demo'?'デモ版':'本番'}に読み込みますか？`)) return false;
+  const n=`担当者${d.staff.length}・顧客${d.clients.length}・予定${d.events.length}・商談${(d.deals||[]).length}${d.outlook?'・売上見通しあり':''}`;
+  if(!confirm(`${opt.label||'バックアップ'}（${n}）を読み込みます。\n今のデータは置き換わります（直前の状態は「読み込み前」として残ります）。よろしいですか？`)) return false;
+  try{ const cur=localStorage.getItem(STORE_KEY); if(cur) localStorage.setItem(STORE_KEY+':before-restore',cur); }catch(e){}
+  resetting=true;
+  const json=JSON.stringify({...d,v:1});
+  try{ localStorage.setItem(STORE_KEY,json); }catch(e){ showToast('保存できませんでした'); resetting=false; return false; }
+  await idbPut('snap:'+STORE_KEY,json);
+  if(opt.fsHandle) await idbPut('fsHandle:'+STORE_KEY,opt.fsHandle);
+  location.reload(); return true;
+}
+function pasteRestore(){ applyBackupText(document.getElementById('dm-paste').value,{label:'貼り付けた内容'}); }
+function fileRestore(inp){ const f=inp.files&&inp.files[0]; if(!f) return; const r=new FileReader(); r.onload=()=>applyBackupText(String(r.result),{label:f.name}); r.readAsText(f); inp.value=''; }
+function dayRestore(k){ const t=localStorage.getItem(k); if(t) applyBackupText(t,{label:k.slice(DAY_PREFIX.length)+' の自動バックアップ'}); }
+function snoozeBackup(){ try{localStorage.setItem(STORE_KEY+':snooze',String(Date.now()+864e5));}catch(e){} renderDataBanner(); }
+
+// ── 画面：保存状況のお知らせ・保存／バックアップの画面 ──
+function renderDataBanner(){
+  const el=document.getElementById('dataBanner'); if(!el) return;
+  const box=(msg,btn,fn,later)=>`<div class="data-banner"><span>${msg}</span><button class="topbar-btn primary" style="height:30px;font-size:11px;" onclick="${fn}">${btn}</button>${later?`<button class="topbar-btn secondary" style="height:30px;font-size:11px;" onclick="snoozeBackup()">あとで</button>`:''}</div>`;
+  let html='';
+  if(fsHandle&&fsState==='needsPermission') html=box('自動保存ファイルへの保存が止まっています。許可すると再開します。','許可する','fsPermit()');
+  else if(fsHandle&&fsState==='error') html=box('自動保存ファイルに書き込めませんでした。保存先を確認してください。','保存の設定を開く','openDataModal()');
+  else if(!DEMO&&hasData()&&fsState!=='ready'){
+    const last=+localStorage.getItem(STORE_KEY+':lastBackup')||0, snooze=+localStorage.getItem(STORE_KEY+':snooze')||0;
+    if(Date.now()-last>7*864e5&&Date.now()>snooze) html=box(last?'バックアップを書き出してから1週間以上たっています。':'まだバックアップを書き出していません。ブラウザのデータが消えたときのために、書き出しておくと安心です。','バックアップを書き出す','openDataModal()',true);
+  }
+  el.innerHTML=html;
+}
+function openDataModal(){ document.getElementById('dataOverlay').hidden=false; renderDataModal(); }
+function closeDataModal(){ document.getElementById('dataOverlay').hidden=true; }
+async function renderDataModal(){
+  const body=document.getElementById('dataBody'); if(!body) return;
+  const fmtD=t=>t?new Date(t).toLocaleString('ja-JP',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'}):'—';
+  let saved=null; try{ saved=JSON.parse(localStorage.getItem(STORE_KEY)||'null'); }catch(e){}
+  const persisted=(navigator.storage&&navigator.storage.persisted)?await navigator.storage.persisted():null;
+  const idbSnap=await idbGet('snap:'+STORE_KEY);
+  const lastBk=+localStorage.getItem(STORE_KEY+':lastBackup')||0, days=dayKeys();
+  const cnt=`担当者${STAFF.length}・顧客${clientList.length}・予定${events.length}・商談${deals.length}${olStore?`・売上見通し（確定${olStore.contracts.length}／見込み${olStore.prospects.length}）`:''}`;
+  const ok=(v,t)=>`<span class="pill ${v?'green':'amber'}">${t}</span>`;
+  const fsLine = !FSA ? '<span style="color:var(--fg3);">このブラウザでは使えません（Chrome / Edge で使えます）</span>'
+    : fsHandle ? (fsState==='ready'?ok(true,'有効')+` <span style="color:var(--fg3);font-size:11px;">最終書き込み ${fsLastWrite?fmtD(fsLastWrite):'—'}</span>`
+        : fsState==='needsPermission'?ok(false,'許可が必要')+` <button class="mf-btn" onclick="fsPermit()">許可する</button>`
+        : ok(false,'エラー')+` <span style="color:var(--fg3);font-size:11px;">${fsErr}</span>`)+` <button class="mf-btn" onclick="fsStop()">自動保存を止める</button>`
+    : ok(false,'未設定');
+  body.innerHTML=`
+  <div class="dm-sec"><div class="dm-h">いまの保存状況</div>
+    <div class="dm-grid">
+      <span>データ</span><span>${cnt}</span>
+      <span>最終保存</span><span>${saved?fmtD(saved.savedAt):'まだ保存されていません'}</span>
+      <span>このブラウザに保存</span><span>${ok(!!saved,saved?'保存済み':'なし')}　<span style="color:var(--fg3);font-size:11px;">別の領域（IndexedDB）にも同じ内容 ${ok(!!idbSnap,idbSnap?'あり':'なし')}</span></span>
+      <span>消えにくくする設定</span><span>${persisted===null?'<span style="color:var(--fg3);">確認できません</span>':ok(persisted,persisted?'許可済み':'ブラウザ任せ')}</span>
+      <span>自動保存ファイル</span><span>${fsLine}</span>
+      <span>最終バックアップ</span><span>${lastBk?fmtD(lastBk):'<span style="color:#D97706;font-weight:700;">まだありません</span>'}</span>
+    </div></div>
+
+  <div class="dm-sec"><div class="dm-h">① バックアップを書き出す（いちばん確実）</div>
+    <div class="dm-p">全データを1つのファイルに書き出します。ブラウザのデータが消えても、このファイルから元に戻せます。</div>
+    <div class="dm-btns"><button class="topbar-btn primary" onclick="exportBackup()">ファイルに書き出す</button><button class="topbar-btn secondary" onclick="copyBackup()">コピーする</button></div>
+    <textarea id="dm-export-text" class="ol-ta" style="margin-top:8px;min-height:90px;" hidden readonly></textarea></div>
+
+  <div class="dm-sec"><div class="dm-h">② バックアップから復元する</div>
+    <div class="dm-btns"><button class="topbar-btn secondary" onclick="document.getElementById('dm-file').click()">ファイルを選んで復元</button><input id="dm-file" type="file" accept=".json,application/json" hidden onchange="fileRestore(this)"></div>
+    <div class="dm-p" style="margin-top:8px;">または、コピーした内容を貼り付けて復元：</div>
+    <textarea id="dm-paste" class="ol-ta" style="min-height:80px;" placeholder="ここにバックアップの内容を貼り付け"></textarea>
+    <div class="dm-btns" style="margin-top:6px;"><button class="topbar-btn secondary" onclick="pasteRestore()">貼り付けた内容で復元</button></div></div>
+
+  <div class="dm-sec"><div class="dm-h">③ 自動保存ファイル（パソコンのファイルに自動で保存）</div>
+    <div class="dm-p">保存先のファイルを1度決めると、データを変更するたびに、そのファイルへ自動で保存します。ブラウザのデータが消えたら、「既存の保存先ファイルを開く」で元に戻せます。</div>
+    ${FSA?`<div class="dm-btns"><button class="topbar-btn secondary" onclick="fsCreate()">保存先ファイルを作る</button><button class="topbar-btn secondary" onclick="fsOpen()">既存の保存先ファイルを開く</button></div>`:'<div class="dm-p" style="color:var(--fg4);">お使いのブラウザは対応していません。Chrome または Edge で開くと使えます。</div>'}</div>
+
+  <div class="dm-sec"><div class="dm-h">④ 日別の自動バックアップ（このブラウザの中・最大14日分）</div>
+    ${days.length?`<div class="dm-days">${days.map(k=>{let c='';try{const d=JSON.parse(localStorage.getItem(k));c=`担当者${d.staff.length}・顧客${d.clients.length}・予定${d.events.length}・商談${(d.deals||[]).length}${d.outlook?'・見通しあり':''}`;}catch(e){}
+      return `<div class="dm-day"><span style="font-family:var(--mono);font-size:11px;">${k.slice(DAY_PREFIX.length)}</span><span style="color:var(--fg3);font-size:11px;flex:1;">${c}</span><button class="mf-btn" onclick="dayRestore('${k}')">この日に戻す</button></div>`;}).join('')}</div>`:'<div class="dm-p" style="color:var(--fg4);">まだありません（データを保存すると、自動で作られます）。</div>'}</div>
+
+  <div class="dm-note">⚠ ブラウザの保存データは、サイトデータの削除・シークレットウィンドウ・Claudeアプリ内のブラウザを閉じたときなどに消えることがあります。<b>普段お使いの Chrome で開き、バックアップを書き出しておく</b>のがおすすめです。</div>`;
+}
+
+// ── 起動時：消えていたら自動で復元／別領域に同じ内容を控える ──
+async function bootData(){
+  try{ if(navigator.storage&&navigator.storage.persist) await navigator.storage.persist(); }catch(e){}
+  await fsInit();
+  if(!localStorage.getItem(STORE_KEY)){
+    let txt=await idbGet('snap:'+STORE_KEY), from='ブラウザ内の別の領域';
+    if(!txt&&fsHandle&&fsState==='ready'){ try{ const t=await (await fsHandle.getFile()).text(); if(t.trim()){ txt=t; from='自動保存ファイル'; } }catch(e){} }
+    if(txt){ try{ const d=JSON.parse(txt); if(d&&d.v===1){ localStorage.setItem(STORE_KEY,JSON.stringify(d)); restore(); populateStaffSelects(); buildSidebarStaff(); switchPage(currentPage); showToast(from+'から、保存データを復元しました'); } }catch(e){} }
+  }
+  const cur=localStorage.getItem(STORE_KEY);
+  if(cur){ saveDaySnapshot(cur); if(!(await idbGet('snap:'+STORE_KEY))) idbPut('snap:'+STORE_KEY,cur); }
+  renderDataBanner();
 }
 // データを変更する操作のあとに自動保存
 ['saveStaff','deleteStaff','saveEvent','deleteEvent','deleteSeriesEvent','moveEvent','saveClient','execDeleteClient','saveDeal','closeDeal','deleteDeal','setDealTemp'].forEach(name=>{
@@ -3180,5 +3377,6 @@ if(DEMO) document.getElementById('demoReset').hidden=false;
 populateStaffSelects();
 buildSidebarStaff();
 renderHome();
+bootData();
 </script>
 </body></html>
