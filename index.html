@@ -1169,7 +1169,7 @@ details.card[open] > summary::before { transform: rotate(90deg); }
       <div class="field" style="grid-column:1/-1;"><label>会社名 <span style="color:var(--red);">*</span></label><input type="text" id="cl-name" placeholder="株式会社〇〇"></div>
       <div class="modal-row">
         <div class="field"><label>担当者（コンサル） *</label><select id="cl-staff"></select></div>
-        <div class="field"><label>プラン *</label><select id="cl-plan" onchange="updateClientAmount(true)"><option value="light">ライト（¥200,000/月）</option><option value="standard">スタンダード（¥300,000/月）</option><option value="project">プロジェクト型（一括）</option><option value="training">研修（一括）</option></select></div>
+        <div class="field"><label>プラン *</label><select id="cl-plan" onchange="updateClientAmount(true)"><option value="light">ライト（¥200,000/月）</option><option value="standard">スタンダード（¥300,000/月）</option><option value="aio_light">AIOライト（¥50,000/月）</option><option value="aio_standard">AIOスタンダード（¥100,000/月）</option><option value="project">プロジェクト型（一括）</option><option value="training">研修（一括）</option></select></div>
       </div>
       <div class="field"><label>営業担当（受注した人）</label><select id="cl-sales"></select></div>
       <div class="field"><label id="cl-amount-label">月額（円）</label><input type="number" id="cl-amount" min="0" step="10000" placeholder="200000"><div id="cl-amount-hint" style="font-size:10px;color:var(--fg4);"></div></div>
@@ -1321,7 +1321,7 @@ details.card[open] > summary::before { transform: rotate(90deg); }
         <div class="field"><label>流入経路</label><select id="dl-source"><option>紹介</option><option>既存客</option><option>説明会/セミナー</option><option>Web問い合わせ</option><option>展示会</option><option>テレアポ</option></select></div>
       </div>
       <div class="modal-row">
-        <div class="field"><label>提案商材</label><select id="dl-product" onchange="updateDealAmountLabel()"><option value="standard">スタンダード（月額）</option><option value="light">ライト（月額）</option><option value="project">プロジェクト型（一括）</option><option value="training">研修（一括）</option></select></div>
+        <div class="field"><label>提案商材</label><select id="dl-product" onchange="updateDealAmountLabel()"><option value="standard">スタンダード（月額）</option><option value="light">ライト（月額）</option><option value="aio_light">AIOライト（月額）</option><option value="aio_standard">AIOスタンダード（月額）</option><option value="project">プロジェクト型（一括）</option><option value="training">研修（一括）</option></select></div>
         <div class="field"><label id="dl-amount-label">想定金額（円）</label><input id="dl-amount" type="number" min="0" step="10000"></div>
       </div>
       <div class="modal-row">
@@ -1367,6 +1367,8 @@ const PLAN_TARGETS = { light:20, standard:20 };
 const PLANS = {
   light:    { label:'ライト',        color:'#6366F1', bg:'#EEF0FF', mrr:200000 },
   standard: { label:'スタンダード',  color:'#4A7BF5', bg:'#EBF1FF', mrr:300000 },
+  aio_light:    { label:'AIOライト',       color:'#D97706', bg:'#FEF3C7', mrr:50000 },
+  aio_standard: { label:'AIOスタンダード', color:'#EA580C', bg:'#FFEDD5', mrr:100000 },
   project:  { label:'プロジェクト型',color:'#8B5CF6', bg:'#EDE9FE', mrr:0 },
   training: { label:'研修',          color:'#14B8A6', bg:'#CCFBF1', mrr:0 },
 };
@@ -2125,7 +2127,7 @@ function renderSales(){
   const prevMRR=MRR_HISTORY.length>=2?MRR_HISTORY[MRR_HISTORY.length-2].mrr:0,diff=totalMRR-prevMRR;
   const staffMRR=STAFF.map((_,i)=>clientList.filter(c=>c.staff===i).reduce((s,c)=>s+clientMRR(c),0));
   const maxStaffMRR=Math.max(...staffMRR);
-  const planCounts={light:0,standard:0,project:0,training:0};
+  const planCounts=Object.fromEntries(Object.keys(PLANS).map(k=>[k,0]));
   clientList.forEach(c=>{planCounts[c.plan]=(planCounts[c.plan]||0)+1;});
 
   const FC12=olSalesForecast(12), FC=FC12?FC12.rows.slice(0,SALES_FC_MONTHS):[];
@@ -2185,7 +2187,7 @@ function renderSales(){
     <div class="card"><div class="card-header"><span class="card-title">MRR 推移（実績＋見通し）</span>${FC12?`<span style="font-size:11px;cursor:pointer;color:var(--primary);font-weight:600;" onclick="switchPage('outlook')">売上見通し ›</span>`:''}</div><div class="card-body">${trendSVG}${FC12?`<div style="font-size:10px;color:var(--fg4);margin-top:6px;line-height:1.6;">● 実績　○ 見通し（先${SALES_FC_MONTHS}か月。売上見通しページの条件で自動計算）</div>`:''}</div></div>
     <div class="card"><div class="card-header"><span class="card-title">プラン別 構成</span></div>
       <div class="card-body">
-        ${['standard','light','project','training'].map(pk=>{
+        ${['standard','light','aio_standard','aio_light','project','training'].map(pk=>{
           const p=PLANS[pk];const cnt=planCounts[pk]||0;const list=clientList.filter(c=>c.plan===pk);
           const mrr=isMonthly(pk)?list.reduce((s,c)=>s+clientMRR(c),0):list.reduce((s,c)=>s+(c.spot||0),0);
           const base=isMonthly(pk)?totalMRR:clientList.filter(c=>!isMonthly(c.plan)).reduce((s,c)=>s+(c.spot||0),0);
@@ -2339,7 +2341,7 @@ function renderDashboard(){
   const MRR_HISTORY=monthlyStats().map(m=>({month:m.label,mrr:m.mrr}));
   const prevMRR=MRR_HISTORY.length>=2?MRR_HISTORY[MRR_HISTORY.length-2].mrr:0,diff=totalMRR-prevMRR;
   const staffMRR=STAFF.map((_,i)=>clientList.filter(c=>c.staff===i).reduce((s,c)=>s+clientMRR(c),0));
-  const planCounts={light:0,standard:0,project:0,training:0};
+  const planCounts=Object.fromEntries(Object.keys(PLANS).map(k=>[k,0]));
   clientList.forEach(c=>planCounts[c.plan]=(planCounts[c.plan]||0)+1);
 
   const W=500,H=140,PL=46,PR=16,PT=14,PB=28;
@@ -2366,15 +2368,11 @@ function renderDashboard(){
     </svg>`;
   }
 
-  const planPct=[
-    {label:'スタンダード',val:planCounts.standard,color:'#4A7BF5'},
-    {label:'ライト',val:planCounts.light,color:'#6366F1'},
-    {label:'PJT型',val:planCounts.project,color:'#8B5CF6'},
-    {label:'研修',val:planCounts.training,color:'#14B8A6'},
-  ];
+  const PLAN_SHORT={project:'PJT型',aio_standard:'AIOスタンダード',aio_light:'AIOライト'};
+  const planPct=['standard','light','aio_standard','aio_light','project','training'].map(k=>({label:PLAN_SHORT[k]||PLANS[k].label,val:planCounts[k]||0,color:PLANS[k].color}));
   const total=clientList.length;
   let cumAngle=0;
-  const r=40,cx=60,cy=55,stroke=14;
+  const r=40,cx=60,cy=62,stroke=14;
   const arcs=planPct.map(p=>{
     const angle=total?(p.val/total)*2*Math.PI:0;
     const x1=cx+r*Math.cos(cumAngle-Math.PI/2),y1=cy+r*Math.sin(cumAngle-Math.PI/2);
@@ -2385,14 +2383,14 @@ function renderDashboard(){
   });
   // 1プランが100%だと円弧の始点=終点で描画されないため円で描く／0社は灰色の輪
   const ring=c=>`<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${c}" stroke-width="${stroke}"/>`;
-  const donutSVG=`<svg viewBox="0 0 170 110" style="width:100%;height:110px;">
+  const donutSVG=`<svg viewBox="0 0 170 128" style="width:100%;height:128px;">
     ${!total?ring('#E5E7F5'):arcs.filter(a=>a.val>0).map(a=>a.full?ring(a.color):`<path d="${a.d}" fill="none" stroke="${a.color}" stroke-width="${stroke}" stroke-linecap="butt"/>`).join('')}
     <text x="${cx}" y="${cy-4}" text-anchor="middle" font-size="14" font-weight="700" fill="#1A1D2E">${total}</text>
     <text x="${cx}" y="${cy+10}" text-anchor="middle" font-size="8" fill="#6B7280">社</text>
     ${planPct.map((p,i)=>`
-      <rect x="126" y="${12+i*22}" width="9" height="9" rx="2" fill="${p.color}"/>
-      <text x="138" y="${20+i*22}" font-size="9" fill="#3D4466">${p.label}</text>
-      <text x="138" y="${30+i*22}" font-size="8" fill="#6B7280">${p.val}社</text>`).join('')}
+      <rect x="112" y="${6+i*20}" width="8" height="8" rx="2" fill="${p.color}"/>
+      <text x="124" y="${13+i*20}" font-size="8.5" fill="#3D4466">${p.label}</text>
+      <text x="124" y="${21+i*20}" font-size="7.5" fill="#6B7280">${p.val}社</text>`).join('')}
   </svg>`;
 
   const wEnd=dateStr(addDays(weekStart,4));
@@ -2658,7 +2656,7 @@ const TEMPS={
   cool:{label:'COOL',color:'#3B82F6',bg:'#EFF6FF',fg:'#1D4ED8',rate:.1,desc:'情報収集・関係構築'},
 };
 const STAGES=['リード','ヒアリング','提案','見積提示','クロージング'];
-const PRODUCTS={standard:{label:'スタンダード',monthly:true},light:{label:'ライト',monthly:true},project:{label:'プロジェクト型',monthly:false},training:{label:'研修',monthly:false}};
+const PRODUCTS={standard:{label:'スタンダード',monthly:true},light:{label:'ライト',monthly:true},aio_light:{label:'AIOライト',monthly:true},aio_standard:{label:'AIOスタンダード',monthly:true},project:{label:'プロジェクト型',monthly:false},training:{label:'研修',monthly:false}};
 let editDealId=null;
 // 商談の評価額：月額商材は12ヶ月分で換算
 function dealValue(d){return PRODUCTS[d.product]?.monthly?(d.amount||0)*12:(d.amount||0);}
@@ -2818,7 +2816,9 @@ function pickTemp(t){
   document.querySelectorAll('#dl-temp-picker button').forEach(b=>b.classList.toggle('on',b.dataset.t===t));
 }
 function updateDealAmountLabel(){
-  const m=PRODUCTS[document.getElementById('dl-product').value]?.monthly;
+  const pr=document.getElementById('dl-product').value, m=PRODUCTS[pr]?.monthly;
+  const amt=document.getElementById('dl-amount'), std=Object.values(PLANS).map(x=>x.mrr).filter(v=>v>0);
+  if(PLANS[pr]&&PLANS[pr].mrr>0&&(amt.value===''||std.includes(+amt.value))) amt.value=PLANS[pr].mrr;
   document.getElementById('dl-amount-label').textContent=m?'想定月額（円）':'想定金額（一括・円）';
 }
 function openDealModal(id=null){
