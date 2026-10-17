@@ -1,1 +1,5 @@
 .DS_Store
+
+# バックアップ・自動保存ファイルは公開リポジトリに入れない（顧客名・金額を含むため）
+aibuddy-backup-*.json
+aibuddy-data-*.json
