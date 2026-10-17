@@ -956,6 +956,12 @@ body.is-dragging, body.is-dragging * { cursor: grabbing !important; }
 
 
 /* 売上見通し */
+.ol-ta { width: 100%; min-height: 120px; resize: vertical; border: 1.5px solid var(--border); border-radius: 10px; padding: 8px 10px; font-family: var(--mono); font-size: 11px; line-height: 1.6; color: var(--fg); background: rgba(255,255,255,.9); outline: none; white-space: pre; overflow: auto; }
+.ol-ta:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(99,102,241,.15); }
+details.card > summary { list-style: none; }
+details.card > summary::-webkit-details-marker { display: none; }
+details.card > summary::before { content: '▸'; display: inline-block; margin-right: 8px; color: var(--primary); transition: transform .15s; }
+details.card[open] > summary::before { transform: rotate(90deg); }
 .ol-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px 16px; }
 .ol-f { display: flex; flex-direction: column; gap: 4px; }
 .ol-f label { font-size: 11px; font-weight: 700; color: var(--fg3); }
@@ -2138,7 +2144,7 @@ function renderSales(){
   <div class="obj-header">
     <div class="obj-icon" style="background:var(--amb-bg);color:var(--amb);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="18" y="3" width="4" height="18" rx="1"/><rect x="10" y="8" width="4" height="13" rx="1"/><rect x="2" y="13" width="4" height="8" rx="1"/></svg></div>
     <div class="obj-meta"><div class="obj-label">Revenue Management</div><div class="obj-name">売上管理</div><div class="obj-sub">${TODAY.getFullYear()}年${TODAY.getMonth()+1}月現在 · AI伴走サービス</div></div>
-    <div class="obj-badges">${(DEMO&&DEMO.outlook)?`<button class="topbar-btn secondary" style="height:28px;font-size:11px;" onclick="switchPage('outlook')">売上見通しを見る ›</button>`:''}<span class="pill green">MRR ${fmt(totalMRR)}</span><span class="pill blue">▲ ${fmt(diff)} 前月比</span></div>
+    <div class="obj-badges"><button class="topbar-btn secondary" style="height:28px;font-size:11px;" onclick="switchPage('outlook')">売上見通しを見る ›</button><span class="pill green">MRR ${fmt(totalMRR)}</span><span class="pill blue">▲ ${fmt(diff)} 前月比</span></div>
   </div>
 
   <div class="kpi-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:16px;">
@@ -2854,15 +2860,22 @@ function scheduleDeal(){
 }
 
 
-// ── 売上見通し（デモ）── //
+// ── 売上見通し ── //
 const OL_COL={base:'#6366F1',pros:'#A5B4FC',scen:'#14B8A6'};
 const OL_LINE={ai:'AI運用',aio:'AIO運用'};
-let olCfg=null;
+let olCfg=null, olStore=null, olFlash='';
+function olData(){ return olStore || (DEMO&&DEMO.outlook) || null; }
+function olTarget(O){ return O.target || (PLAN_TARGETS.light*PLANS.light.mrr+PLAN_TARGETS.standard*PLANS.standard.mrr); }
+function olDefaults(O){
+  if(O.scenario) return {...O.scenario};
+  const avg=(ln,def)=>{const l=O.contracts.filter(c=>c.line===ln);return l.length?Math.round(l.reduce((a,c)=>a+c.amount,0)/l.length):def;};
+  return {aiN:1,aiAvg:avg('ai',300000),aioN:1,aioAvg:avg('aio',50000),prob:50,from:ymAdd(O.start,4),months:12};
+}
 function ymAdd(ym,n){const [y,m]=ym.split('-').map(Number);const d=new Date(y,m-1+n,1);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');}
 function ymDiff(a,b){const [y1,m1]=a.split('-').map(Number),[y2,m2]=b.split('-').map(Number);return (y2-y1)*12+(m2-m1);}
 const olMan=v=>Math.round(v/10000).toLocaleString('ja-JP')+'万';
 function olCompute(cfg,months){
-  const O=DEMO.outlook, rows=[];
+  const O=olData(), rows=[];
   for(let i=0;i<months;i++){
     const ym=ymAdd(O.start,i);
     const sum=(arr,ln)=>arr.filter(c=>c.start<=ym&&(!ln||c.line===ln)).reduce((s,c)=>s+c.amount,0);
@@ -2902,34 +2915,92 @@ function olChart(rows,target){
   if(showT) g+=`<line x1="${PL}" y1="${gy(target)}" x2="${W-PR}" y2="${gy(target)}" stroke="#EC4899" stroke-width="1.4" stroke-dasharray="5 4"/><text x="${W-PR}" y="${gy(target)-5}" text-anchor="end" font-size="9.5" font-weight="700" fill="#DB2777">目標 ${olMan(target)}/月</text>`;
   return `<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;display:block;">${g}</svg>`;
 }
+
+// ── スプレッドシート貼り付け取り込み（このブラウザの中だけに保存） ──
+function olParseRows(text){
+  const rows=[]; let total=null;
+  String(text||'').split(/\r?\n/).forEach(raw=>{
+    const cells=raw.split('\t').map(c=>c.trim()).filter(c=>c!=='');
+    if(!cells.length) return;
+    let name=null, plan='', amount=0, start='';
+    cells.forEach(c=>{
+      const ym=c.match(/^(\d{4})\s*[年\/\-.]\s*(\d{1,2})\s*月?$/);
+      if(ym){ start=ym[1]+'-'+String(ym[2]).padStart(2,'0'); return; }
+      if(/^[¥￥]?\s*-?[\d,]+\s*円?$/.test(c)){ amount=parseInt(c.replace(/[^\d]/g,''))||0; return; }
+      const pm=c.match(/(スタンダード|ライト|プロジェクト)/);
+      if(pm){ plan=pm[1]; return; }
+      if(/^[\/／・\-ー]+$/.test(c)) return;               // 未選択のプルダウン「／」
+      if(name===null) name=c;
+    });
+    if(!name || /^(AI運用|AIO運用|運用|項目|社名|クライアント)$/.test(name)) return;
+    if(/^(合計|小計)/.test(name)){ if(amount) total=amount; return; }
+    let fromMonth=0; const mm=name.match(/[（(]\s*(\d{1,2})月から\s*[）)]/);
+    if(mm){ fromMonth=+mm[1]; name=name.replace(mm[0],'').trim(); }
+    rows.push({co:name,plan,amount,start,fromMonth});
+  });
+  return {rows,total};
+}
+function olNextMonth(monthNo,from){            // from より後で、最初にくる monthNo 月
+  for(let i=1;i<=24;i++){ const ym=ymAdd(from,i); if(+ym.slice(5)===monthNo) return ym; }
+  return ymAdd(from,1);
+}
+function olImport(){
+  const val=id=>document.getElementById(id).value;
+  const A=olParseRows(val('ol-paste-ai')), B=olParseRows(val('ol-paste-aio'));
+  const msg=document.getElementById('olImportMsg');
+  if(!A.rows.length && !B.rows.length){ msg.style.color='#DC2626'; msg.textContent='貼り付けた内容から行を読み取れませんでした。表を選択してコピーし、貼り付け直してください。'; return; }
+  const priceAi=Math.max(0,parseInt(val('ol-pr-ai'))||0), priceAio=Math.max(0,parseInt(val('ol-pr-aio'))||0);
+  const confirmedRows=[...A.rows.map(r=>({...r,line:'ai'})),...B.rows.map(r=>({...r,line:'aio'}))].filter(r=>r.plan&&r.amount>0);
+  const starts=confirmedRows.map(r=>r.start).filter(Boolean).sort();
+  const base=starts[0]||(TODAY.getFullYear()+'-'+String(TODAY.getMonth()+1).padStart(2,'0'));
+  const contracts=confirmedRows.map(r=>({co:r.co,line:r.line,plan:r.plan,amount:r.amount,start:r.start||base}));
+  // 金額・プランが無い行＝見込み案件（金額は仮単価、開始月は月2件ずつ順に仮置き。「N月から」はその月）
+  const prospects=[];
+  ['ai','aio'].forEach(ln=>{
+    const src=(ln==='ai'?A:B).rows.filter(r=>!(r.plan&&r.amount>0));
+    src.forEach((r,i)=>prospects.push({co:r.co,line:ln,plan:r.plan||'スタンダード',amount:r.amount||(ln==='ai'?priceAi:priceAio),
+      start:r.fromMonth?olNextMonth(r.fromMonth,base):ymAdd(base,1+Math.floor(i/2))}));
+  });
+  olStore={start:base,contracts,prospects,imported:true,imported_at:new Date().toISOString()};
+  olCfg=null; persist();
+  const sum=ln=>contracts.filter(c=>c.line===ln).reduce((a,c)=>a+c.amount,0);
+  const chk=(ln,t)=>t==null?'':(sum(ln)===t?`（シートの合計 ${fmt(t)} と一致）`:`（⚠ シートの合計 ${fmt(t)} と不一致）`);
+  olFlash=`取り込みました：AI運用 確定${contracts.filter(c=>c.line==='ai').length}件 ${fmt(sum('ai'))}${chk('ai',A.total)} ／ AIO運用 確定${contracts.filter(c=>c.line==='aio').length}件 ${fmt(sum('aio'))}${chk('aio',B.total)} ／ 見込み案件 ${prospects.length}件`;
+  renderOutlook();
+}
+function olClear(){
+  if(!confirm('取り込んだ売上見通しのデータを消しますか？（顧客・予定・商談のデータは消えません）')) return;
+  olStore=null; olCfg=null; olFlash=''; persist(); renderOutlook();
+}
+
 function olRead(){
   const v=id=>Math.max(0,parseFloat(document.getElementById(id).value)||0);
   olCfg={aiN:v('ol-aiN'),aiAvg:v('ol-aiAvg'),aioN:v('ol-aioN'),aioAvg:v('ol-aioAvg'),prob:Math.min(100,v('ol-prob')),
-    from:document.getElementById('ol-from').value||DEMO.outlook.scenario.from,months:parseInt(document.getElementById('ol-months').value)||12};
+    from:document.getElementById('ol-from').value||olDefaults(olData()).from,months:parseInt(document.getElementById('ol-months').value)||12};
   olUpdate();
 }
 function olReset(){
-  olCfg={...DEMO.outlook.scenario};
+  olCfg=olDefaults(olData());
   const set=(id,x)=>document.getElementById(id).value=x;
   set('ol-aiN',olCfg.aiN);set('ol-aiAvg',olCfg.aiAvg);set('ol-aioN',olCfg.aioN);set('ol-aioAvg',olCfg.aioAvg);
   set('ol-prob',olCfg.prob);set('ol-from',olCfg.from);set('ol-months',olCfg.months);olUpdate();
 }
 function olUpdate(){
-  const O=DEMO.outlook, rows=olCompute(olCfg,olCfg.months), last=rows[rows.length-1], first=rows[0];
+  const O=olData(), rows=olCompute(olCfg,olCfg.months), last=rows[rows.length-1], first=rows[0];
   const total=rows.reduce((s,r)=>s+r.total,0);
-  const reach=olReach(olCfg,O.target);
+  const reach=olReach(olCfg,olTarget(O));
   const mLabel=ym=>`${ym.slice(0,4)}年${+ym.slice(5)}月`;
   document.getElementById('olResult').innerHTML=`
   <div class="kpi-grid" style="margin-bottom:16px;">
     <div class="kpi-card blue"><div class="kpi-label">確定MRR（${mLabel(first.ym)}〜）</div><div class="kpi-value">${fmt(first.base)}</div><div class="kpi-diff">AI運用 ${fmt(O.contracts.filter(c=>c.line==='ai').reduce((s,c)=>s+c.amount,0))} ／ AIO運用 ${fmt(O.contracts.filter(c=>c.line==='aio').reduce((s,c)=>s+c.amount,0))}</div></div>
     <div class="kpi-card purple"><div class="kpi-label">${olCfg.months}か月後のMRR（${mLabel(last.ym)}）</div><div class="kpi-value">${fmt(Math.round(last.total))}</div><div class="kpi-diff">確定の <b>${(last.total/first.base).toFixed(1)}倍</b> ／ 年換算 ${fmt(Math.round(last.total*12))}</div></div>
     <div class="kpi-card green"><div class="kpi-label">${olCfg.months}か月の売上見込み</div><div class="kpi-value">${fmt(Math.round(total))}</div><div class="kpi-diff">月平均 ${fmt(Math.round(total/rows.length))}</div></div>
-    <div class="kpi-card amber"><div class="kpi-label">目標 ${fmt(O.target)}/月に到達</div><div class="kpi-value" style="font-size:18px;">${reach?mLabel(reach.ym):'6年以内に未到達'}</div><div class="kpi-diff">${reach?`${reach.after}か月後（この条件のまま増やした場合）`:'受注ペースの見直しが必要です'}</div></div>
+    <div class="kpi-card amber"><div class="kpi-label">目標 ${fmt(olTarget(O))}/月に到達</div><div class="kpi-value" style="font-size:18px;">${reach?mLabel(reach.ym):'6年以内に未到達'}</div><div class="kpi-diff">${reach?`${reach.after}か月後（この条件のまま増やした場合）`:'受注ペースの見直しが必要です'}</div></div>
   </div>
   <div class="card" style="margin-bottom:16px;">
     <div class="card-header"><span class="card-title">月次MRRの見通し（月額売上）</span>
       <div class="ol-legend"><span><i style="background:${OL_COL.base}"></i>確定契約</span><span><i style="background:${OL_COL.pros}"></i>見込み案件（確度${olCfg.prob}%）</span><span><i style="background:${OL_COL.scen}"></i>毎月の新規受注（シナリオ）</span></div></div>
-    <div class="card-body">${olChart(rows,O.target)}</div>
+    <div class="card-body">${olChart(rows,olTarget(O))}</div>
   </div>
   <div class="card" style="margin-bottom:16px;">
     <div class="card-header" style="padding:14px 18px 8px;"><span class="card-title">月別の内訳</span><span class="section-count">${rows.length}か月</span></div>
@@ -2945,18 +3016,54 @@ function olUpdate(){
   </div>`;
 }
 function renderOutlook(){
-  const O=DEMO&&DEMO.outlook; if(!O){document.getElementById('outlookInner').innerHTML='<div class="card"><div class="card-body">売上見通しのデータがありません。</div></div>';return;}
-  if(!olCfg) olCfg={...O.scenario};
+  const O=olData(), host=document.getElementById('outlookInner');
+  const icon='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 6-7"/></svg>';
+  const flash=olFlash?`<div style="background:#ECFDF5;border:1px solid #A7F3D0;color:#065F46;border-radius:12px;padding:10px 14px;font-size:12px;margin-bottom:14px;line-height:1.7;">${olFlash}</div>`:'';
+  olFlash='';
+  const importPanel=`
+  <details class="card" style="margin-bottom:16px;"${O?'':' open'}>
+    <summary style="cursor:pointer;padding:14px 18px;font-weight:700;font-size:13px;color:var(--fg);">スプレッドシートから取り込む（お客様名・プラン・金額・開始月）</summary>
+    <div class="card-body" style="padding-top:4px;">
+      <div style="font-size:11.5px;color:var(--fg3);line-height:1.75;margin-bottom:10px;">スプレッドシートの <b>AI運用</b> と <b>AIO運用</b> の表を、それぞれ範囲選択してコピーし、下の欄に貼り付けて「取り込む」を押してください。
+        取り込んだ内容は<b>このブラウザの中だけ</b>に保存され、公開サイトには載りません（別のPCには引き継がれません）。<br>
+        金額・プランが空の行（赤字のお客様）は「見込み案件」として扱います。名前に「（2月から）」とあればその月を開始月にします。</div>
+      <div class="ol-grid">
+        <div class="ol-f"><label>AI運用の表</label><textarea id="ol-paste-ai" class="ol-ta" placeholder="A社&#9;スタンダードプラン&#9;¥300,000&#9;2026年11月"></textarea></div>
+        <div class="ol-f"><label>AIO運用の表</label><textarea id="ol-paste-aio" class="ol-ta" placeholder="A社&#9;ライトプラン&#9;¥50,000&#9;2026年11月"></textarea></div>
+        <div class="ol-f"><label>見込み案件の仮単価　AI運用</label><div class="ol-in"><input id="ol-pr-ai" type="number" min="0" step="10000" value="300000"><span>円/月</span></div></div>
+        <div class="ol-f"><label>見込み案件の仮単価　AIO運用</label><div class="ol-in"><input id="ol-pr-aio" type="number" min="0" step="5000" value="50000"><span>円/月</span></div></div>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:12px;align-items:center;flex-wrap:wrap;">
+        <button class="topbar-btn primary" onclick="olImport()">取り込む</button>
+        ${O&&O.imported?'<button class="topbar-btn secondary" onclick="olClear()">取り込みを消す</button>':''}
+        <span id="olImportMsg" style="font-size:11.5px;"></span>
+      </div>
+    </div>
+  </details>`;
+  if(!O){
+    host.innerHTML=`<div class="obj-header"><div class="obj-icon" style="background:#E0E7FF;color:#4338CA;">${icon}</div>
+      <div class="obj-meta"><div class="obj-label">Revenue Outlook</div><div class="obj-name">売上見通し</div><div class="obj-sub">毎月の新規受注を重ねたときの、月額売上（MRR）の伸びを見る</div></div></div>
+      ${flash}${importPanel}
+      <div class="card"><div class="card-body" style="color:var(--fg3);font-size:12px;line-height:1.8;">まだデータがありません。上の「スプレッドシートから取り込む」から、契約の表を貼り付けてください。</div></div>`;
+    return;
+  }
+  if(!olCfg) olCfg=olDefaults(O);
   const c=olCfg;
-  const confirmedSum=O.contracts.reduce((s,x)=>s+x.amount,0), prosSum=O.prospects.reduce((s,x)=>s+x.amount,0);
+  const confirmedSum=O.contracts.reduce((a,x)=>a+x.amount,0), prosSum=O.prospects.reduce((a,x)=>a+x.amount,0);
   const field=(id,label,val,step,suffix)=>`<div class="ol-f"><label>${label}</label><div class="ol-in"><input id="${id}" type="number" min="0" step="${step}" value="${val}" oninput="olRead()"><span>${suffix}</span></div></div>`;
   const tr=(x,st)=>`<tr><td style="font-weight:600;">${x.co}</td><td>${OL_LINE[x.line]}</td><td>${x.plan}</td><td class="num">${fmt(x.amount)}</td><td style="font-family:var(--mono);font-size:11px;">${x.start.replace('-','/')}</td><td class="center"><span class="pill ${st==='c'?'green':'amber'}">${st==='c'?'確定':'見込み（仮置き）'}</span></td></tr>`;
-  document.getElementById('outlookInner').innerHTML=`
+  const lineSum=ln=>O.contracts.filter(x=>x.line===ln).reduce((a,x)=>a+x.amount,0);
+  const avgAi=olDefaults({...O,scenario:null}).aiAvg, avgAio=olDefaults({...O,scenario:null}).aioAvg;
+  const note=O.imported
+    ? '出典：スプレッドシートから貼り付けて取り込み（このブラウザにのみ保存）。見込み案件の金額は仮単価、開始月は仮置き（月2件ずつ順に開始。「N月から」の記載がある場合はその月）です。'
+    : '出典：19期 売上管理表（運用売上）。お客様名は匿名化しています。見込み案件の金額（標準単価）と開始月は仮置きです（I社のみ元データに「2月から」の記載あり）。';
+  host.innerHTML=`
   <div class="obj-header">
-    <div class="obj-icon" style="background:#E0E7FF;color:#4338CA;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 6-7"/></svg></div>
+    <div class="obj-icon" style="background:#E0E7FF;color:#4338CA;">${icon}</div>
     <div class="obj-meta"><div class="obj-label">Revenue Outlook</div><div class="obj-name">売上見通し</div><div class="obj-sub">毎月の新規受注を重ねたときの、月額売上（MRR）の伸びを見る</div></div>
     <div class="obj-badges"><span class="pill green">確定 ${fmt(confirmedSum)}/月</span><span class="pill amber">見込み案件 ${fmt(prosSum)}/月</span></div>
   </div>
+  ${flash}${importPanel}
 
   <div class="card" style="margin-bottom:16px;">
     <div class="card-header"><span class="card-title">シミュレーション条件</span><span class="note" style="font-size:11px;color:var(--fg3);">数字を変えると、下のグラフと表がすぐに変わります</span></div>
@@ -2971,7 +3078,7 @@ function renderOutlook(){
         <div class="ol-f"><label>表示する期間</label><div class="ol-in"><select id="ol-months" onchange="olRead()"><option value="12"${c.months===12?' selected':''}>12か月</option><option value="18"${c.months===18?' selected':''}>18か月</option><option value="24"${c.months===24?' selected':''}>24か月</option></select></div></div>
         <div class="ol-f" style="justify-content:flex-end;"><button class="topbar-btn secondary" style="height:34px;" onclick="olReset()">初期値に戻す</button></div>
       </div>
-      <div style="font-size:10.5px;color:var(--fg4);margin-top:8px;">平均月額の初期値は確定契約の平均（AI運用 ${fmt(280000)}／AIO運用 ${fmt(62500)}）。新規受注は「開始月」から毎月積み上がり、解約は考慮していません。</div>
+      <div style="font-size:10.5px;color:var(--fg4);margin-top:8px;">平均月額の初期値は確定契約の平均（AI運用 ${fmt(avgAi)}／AIO運用 ${fmt(avgAio)}）。新規受注は「開始月」から毎月積み上がり、解約は考慮していません。</div>
     </div>
   </div>
 
@@ -2983,7 +3090,7 @@ function renderOutlook(){
       <thead><tr><th>お客様</th><th>ライン</th><th>プラン</th><th class="num">月額</th><th>開始月</th><th class="center">状態</th></tr></thead>
       <tbody>${O.contracts.map(x=>tr(x,'c')).join('')}${O.prospects.map(x=>tr(x,'p')).join('')}</tbody>
     </table></div>
-    <div style="padding:10px 18px 14px;font-size:10.5px;color:var(--fg3);line-height:1.7;">出典：19期 売上管理表（運用売上）。お客様名は匿名化しています。見込み案件の金額（標準単価）と開始月は仮置きです（I社のみ元データに「2月から」の記載あり）。</div>
+    <div style="padding:10px 18px 14px;font-size:10.5px;color:var(--fg3);line-height:1.7;">${note}</div>
   </div>`;
   olUpdate();
 }
@@ -2994,7 +3101,7 @@ let storeWarned=false, resetting=false;
 function persist(){
   if(resetting) return;  // リセット中は書き戻さない
   try{
-    localStorage.setItem(STORE_KEY, JSON.stringify({v:1,savedAt:new Date().toISOString(),staff:STAFF,clients:clientList,events,nextId,nextClientId,deals,nextDealId}));
+    localStorage.setItem(STORE_KEY, JSON.stringify({v:1,savedAt:new Date().toISOString(),staff:STAFF,clients:clientList,events,nextId,nextClientId,deals,nextDealId,outlook:olStore}));
   }catch(err){
     if(!storeWarned){storeWarned=true;showToast('このブラウザではデータを保存できません（再読み込みで消えます）');}
   }
@@ -3010,6 +3117,7 @@ function restore(){
     nextClientId=Math.max(d.nextClientId||100,...clientList.map(c=>c.id+1));
     if(Array.isArray(d.deals)) deals=d.deals;
     nextDealId=Math.max(d.nextDealId||1,...deals.map(x=>x.id+1));
+    olStore=d.outlook||null;
   }catch(err){}
 }
 function resetDemo(){
@@ -3035,7 +3143,6 @@ addEventListener('storage',ev=>{
 restore();
 deals.forEach(d=>{if(d.source==='既存顧客')d.source='既存客';});
 if(DEMO) document.getElementById('demoReset').hidden=false;
-if(!(DEMO&&DEMO.outlook)) document.getElementById('nav-outlook').style.display='none';
 populateStaffSelects();
 buildSidebarStaff();
 renderHome();
