@@ -105,10 +105,19 @@ html,body { height: 100%; font-family: var(--font); color: var(--fg); background
 .nav-item.active .ni-icon { filter: none; }
 
 .sidebar-staff { padding: 12px 10px; border-top: 1px solid rgba(255,255,255,.08); }
-.cl-seg { display:flex; gap:0; background:var(--page-bg); border:1px solid var(--border); border-radius:10px; padding:3px; }
-.cl-seg button { flex:1; border:none; background:none; font-family:var(--font); font-size:12px; font-weight:700; color:var(--fg3); padding:7px 8px; border-radius:8px; cursor:pointer; }
-.cl-seg button.on { background:#fff; color:var(--primary); box-shadow:0 1px 4px rgba(26,29,46,.12); }
-.cl-seg button#cl-st-prospect.on { color:#B45309; }
+.cl-choice { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:12px; }
+.cl-choice button { text-align:left; font-family:var(--font); background:#fff; border:2px solid var(--border); border-radius:12px; padding:10px 12px; cursor:pointer; display:flex; flex-direction:column; gap:2px; opacity:.72; }
+.cl-choice button b { font-size:14px; color:var(--fg); }
+.cl-choice button span { font-size:11.5px; font-weight:600; color:var(--fg2); }
+.cl-choice button em { font-style:normal; font-size:10px; color:var(--fg3); line-height:1.5; margin-top:3px; }
+.cl-choice button:hover { opacity:1; }
+.cl-choice #cl-st-won.on { opacity:1; border-color:#16A34A; background:#F0FDF4; box-shadow:0 0 0 3px rgba(22,163,74,.15); }
+.cl-choice #cl-st-won.on b { color:#15803D; }
+.cl-choice #cl-st-prospect.on { opacity:1; border-color:#F59E0B; background:#FFFBEB; box-shadow:0 0 0 3px rgba(245,158,11,.18); }
+.cl-choice #cl-st-prospect.on b { color:#B45309; }
+.modal-header.amber { background:#D97706; }
+.mf-btn.amber { background:#D97706; color:#fff; border-color:transparent; }
+@media (max-width:520px){ .cl-choice { grid-template-columns:1fr; } }
 /* サーバー保存の状態 */
 .sync-status { font-size:10px; line-height:1.4; padding:2px 10px 0 38px; color:rgba(255,255,255,.45); }
 .sync-status.ok { color:#86EFAC; }
@@ -459,7 +468,11 @@ table.dt td.link-cell:hover { text-decoration: underline; }
   max-width: 480px;
   box-shadow: 0 20px 60px rgba(26,29,46,.2);
   overflow: hidden;
+  /* 画面より背の高いモーダルは、中身だけスクロールさせる（登録ボタンが画面の外に出ないように） */
+  display: flex; flex-direction: column;
+  max-height: calc(100vh - 24px); max-height: calc(100dvh - 24px);
 }
+.modal > .modal-header, .modal > .modal-footer { flex-shrink: 0; }
 .modal-header {
   display: flex;
   align-items: center;
@@ -473,7 +486,7 @@ table.dt td.link-cell:hover { text-decoration: underline; }
 .modal-header.green { background: #16A34A; }
 .modal-close { background: rgba(255,255,255,.2); border: none; color: #fff; border-radius: 6px; width: 26px; height: 26px; cursor: pointer; font-size: 13px; display: flex; align-items: center; justify-content: center; }
 .modal-close:hover { background: rgba(255,255,255,.3); }
-.modal-body { padding: 18px 20px; display: flex; flex-direction: column; gap: 12px; }
+.modal-body { padding: 18px 20px; display: flex; flex-direction: column; gap: 12px; overflow-y: auto; min-height: 0; flex: 1 1 auto; -webkit-overflow-scrolling: touch; }
 .modal-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .modal-footer { padding: 12px 20px; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 8px; background: #FAFBFE; }
 
@@ -1089,7 +1102,8 @@ details.card[open] > summary::before { transform: rotate(90deg); }
       <span style="display:flex;align-items:center;gap:4px;"><span class="leg-dot" style="background:#6366F1;"></span>商談</span>
     </div>
     <div style="display:flex;gap:8px;align-items:center;">
-      <button class="topbar-btn secondary" id="btnNewClient" style="display:none;" onclick="openClientModal()">＋ お客様を登録</button>
+      <button class="topbar-btn" id="btnNewClient" style="display:none;background:#16A34A;color:#fff;border-color:transparent;" onclick="openClientModal(null,'won')" title="契約が決まったお客様を登録（顧問リストに入り、売上に計上されます）">＋ 確定案件を登録</button>
+      <button class="topbar-btn" id="btnNewProspect" style="display:none;background:#FFFBEB;color:#B45309;border-color:#FCD34D;" onclick="openClientModal(null,'prospect')" title="まだ契約が決まっていない案件を登録（営業管理の商談に入り、売上には入りません）">＋ 未受注案件を登録</button>
       <button class="topbar-btn primary"   id="btnNew"       style="display:none;" onclick="openAddModal()">＋ 予定を追加</button>
       <button class="topbar-btn primary"   id="btnNewDeal"   style="display:none;" onclick="openDealModal()">＋ 商談を登録</button>
       <button class="topbar-btn primary"   id="btnNewEvent2" style="display:none;" onclick="openAddModal()">＋ 予定を追加</button>
@@ -1193,11 +1207,10 @@ details.card[open] > summary::before { transform: rotate(90deg); }
   <div class="modal" style="max-width:480px;">
     <div class="modal-header green" id="clientModalHeader">お客様を登録 <button class="modal-close" onclick="closeClientModal()">✕</button></div>
     <div class="modal-body">
-      <div id="cl-status-row" class="cl-seg" style="grid-column:1/-1;">
-        <button type="button" id="cl-st-won" class="on" onclick="setClientStatus('won')">受注済み</button>
-        <button type="button" id="cl-st-prospect" onclick="setClientStatus('prospect')">未受注（見込み）</button>
+      <div id="cl-status-row" class="cl-choice" style="grid-column:1/-1;">
+        <button type="button" id="cl-st-won" onclick="setClientStatus('won')"><b>確定案件</b><span>契約が決まった（受注済み）</span><em>顧問リストに登録。契約開始月から売上に計上</em></button>
+        <button type="button" id="cl-st-prospect" onclick="setClientStatus('prospect')"><b>未受注案件</b><span>まだ契約が決まっていない</span><em>営業管理の商談に登録。売上には入らない</em></button>
       </div>
-      <div id="cl-prospect-note" style="display:none;grid-column:1/-1;font-size:11px;line-height:1.7;color:#92400E;background:#FFFBEB;border:1px solid #FDE68A;border-radius:10px;padding:8px 12px;margin-bottom:10px;">未受注は、顧客ではなく「営業管理の商談」として登録します。当月の売上・稼働社数には入らず、「未受注の見込み（最大）」に入ります。受注が決まったら、営業管理で「受注」にすると顧問リストに入ります。</div>
       <div class="field" id="cl-temp-row" style="display:none;"><label>見込み度</label><select id="cl-temp"><option value="hot">HOT（受注間近）</option><option value="warm" selected>WARM（検討中）</option><option value="cool">COOL（情報収集段階）</option></select></div>
       <div class="field" style="grid-column:1/-1;"><label>会社名 <span style="color:var(--red);">*</span></label><input type="text" id="cl-name" placeholder="株式会社〇〇"></div>
       <div class="modal-row">
@@ -1749,6 +1762,7 @@ function switchPage(page){
   document.getElementById('legendWrap').style.display=isSched?'':'none';
   document.getElementById('btnNew').style.display=isSched?'':'none';
   document.getElementById('btnNewClient').style.display=isClients?'':'none';
+  document.getElementById('btnNewProspect').style.display=isClients?'':'none';
   document.getElementById('btnNewEvent2').style.display=isClients?'':'none';
   document.getElementById('btnNewDeal').style.display=page==='pipeline'?'':'none';
   if(page==='schedule'){buildStaffFilters();render();}
@@ -2558,23 +2572,18 @@ function setClientStatus(v){
   clStatus=v; const pr=v==='prospect';
   document.getElementById('cl-st-won').classList.toggle('on',!pr);
   document.getElementById('cl-st-prospect').classList.toggle('on',pr);
-  document.getElementById('cl-prospect-note').style.display=pr?'':'none';
   document.getElementById('cl-temp-row').style.display=pr?'':'none';
+  const stf=document.getElementById('cl-staff'); if(stf&&stf.closest('.field')) stf.closest('.field').style.display=pr?'none':'';
   document.getElementById('cl-since').previousElementSibling.textContent=pr?'契約開始（予定）月':'契約開始月';
   document.getElementById('cl-sales').previousElementSibling.textContent=pr?'営業担当':'営業担当（受注した人）';
   document.getElementById('cl-next').parentElement.querySelector('label').textContent=pr?'次回アクション期日':'次回訪問予定日';
-  document.getElementById('clientSaveBtn').textContent=pr?'商談として登録する':'登録する';
-  document.getElementById('clientModalHeader').childNodes[0].textContent=pr?'未受注の案件を登録 ':'お客様を登録 ';
+  const btn=document.getElementById('clientSaveBtn'); btn.textContent=pr?'未受注案件として登録する':'確定案件として登録する'; btn.className='mf-btn '+(pr?'amber':'green');
+  const hdr=document.getElementById('clientModalHeader'); hdr.className='modal-header '+(pr?'amber':'green'); hdr.childNodes[0].textContent=pr?'未受注案件を登録 ':'確定案件（受注済み）を登録 ';
 }
-function openClientModal(id=null){
+function openClientModal(id=null,mode='won'){
   editClientId=id;
   const isEdit=id!==null;
   document.getElementById('cl-status-row').style.display=isEdit?'none':'';
-  setClientStatus('won');
-  const hdr=document.getElementById('clientModalHeader');
-  const btn=document.getElementById('clientSaveBtn');
-  if(hdr) hdr.childNodes[0].textContent=isEdit?'顧客を編集 ':'お客様を登録 ';
-  if(btn) btn.textContent=isEdit?'保存する':'登録する';
 
   populateStaffSelects();
 
@@ -2609,6 +2618,8 @@ function openClientModal(id=null){
     setTimeout(()=>buildDatePicker('cl-next-picker','cl-next',dateStr(TODAY)),0);
   }
   document.getElementById('cl-err').style.display='none';
+  setClientStatus(isEdit?'won':mode);
+  if(isEdit){ const h=document.getElementById('clientModalHeader'); h.childNodes[0].textContent='顧客を編集 '; document.getElementById('clientSaveBtn').textContent='保存する'; }
   document.getElementById('clientOverlay').hidden=false;
 }
 
