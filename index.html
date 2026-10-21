@@ -2948,7 +2948,8 @@ function olCompute(cfg,months,opt){
   const O=olData(), rows=[];
   const first=(opt&&opt.first)||O.start, skipReg=!!(opt&&opt.skipRegistered);   // skipRegistered：顧問リストに登録済みの契約は除く（登録済み顧客と二重にならないように）
   const pick=a=>skipReg?a.filter(c=>!c.registered):a;
-  const cts=pick(O.contracts).concat(skipReg?[]:olPendingRows()), prs=pick(O.prospects);
+  const curYM=ymOf(TODAY);
+  const cts=pick(O.contracts).filter(c=>skipReg||!(c.registered&&c.start>curYM)).concat(skipReg?[]:olPendingRows()), prs=pick(O.prospects);   // 登録済み扱いで、まだ開始前の契約は、顧問リスト側の「受注予定」で数える（二重にしない）
   const from=(skipReg&&cfg.from<first)?first:cfg.from;
   for(let i=0;i<months;i++){
     const ym=ymAdd(first,i);
@@ -3004,7 +3005,7 @@ function olRegister(i){
 }
 function olMarkRegistered(i){
   const O=olWritable(); const c=O&&O.contracts[i]; if(!c) return;
-  if(!confirm(`「${c.co}（${OL_LINE[c.line]}）」を、顧問リストに手で登録済みとして扱います。\n見通しからは外れます（二重計上を防ぐため）。よろしいですか？`)) return;
+  if(!confirm(`「${c.co}（${OL_LINE[c.line]}）」を、顧問リスト（営業管理の受注）に登録済みとして扱います。\nこの見通しの契約は数えなくなり、顧問リスト側の「受注予定」だけで計上されます（二重計上を防ぐため）。\n※顧問リストに同じ受注が無いと、売上から抜けます。よろしいですか？`)) return;
   c.registered=true; olRefreshAll(); showToast('登録済み扱いにしました');
 }
 function olRegisterDue(){
@@ -3182,15 +3183,15 @@ function renderOutlook(){
   }
   if(!olCfg) olCfg=olDefaults(O);
   const c=olCfg;
-  const confirmedSum=O.contracts.reduce((a,x)=>a+x.amount,0)+olPendingRows().reduce((a,x)=>a+x.amount,0), prosSum=O.prospects.reduce((a,x)=>a+x.amount,0);
+  const confirmedSum=O.contracts.filter(x=>!(x.registered&&x.start>ymOf(TODAY))).reduce((a,x)=>a+x.amount,0)+olPendingRows().reduce((a,x)=>a+x.amount,0), prosSum=O.prospects.reduce((a,x)=>a+x.amount,0);
   const field=(id,label,val,step,suffix)=>`<div class="ol-f"><label>${label}</label><div class="ol-in"><input id="${id}" type="number" min="0" step="${step}" value="${val}" oninput="olRead()"><span>${suffix}</span></div></div>`;
   const cur=ymOf(TODAY);
   const tr=(x,st,i)=>{
     let pill, act='';
     if(st==='c'){
-      if(x.registered) pill='<span class="pill blue">登録済み</span>';
+      if(x.registered) pill=x.start>cur?'<span class="pill blue">登録済み（顧問リストの受注予定で計上）</span>':'<span class="pill blue">登録済み</span>';
       else if(x.start<=cur){ pill='<span class="pill red">要登録</span>'; act=`<button class="ol-act primary" onclick="olRegister(${i})">顧問リストに登録</button><button class="ol-act" onclick="olMarkRegistered(${i})" title="顧問リストに手で登録済みのとき">登録済み扱い</button>`; }
-      else { pill='<span class="pill green">確定</span>'; act=`<span style="font-size:10px;color:var(--fg4);">${+x.start.slice(5)}月に登録できます</span>`; }
+      else { pill='<span class="pill green">確定</span>'; act=`<button class="ol-act" onclick="olMarkRegistered(${i})" title="同じ受注を、営業管理・顧問リストに登録済みのとき（二重計上を防ぎます）">顧問リストに登録済み</button><span style="font-size:10px;color:var(--fg4);">${+x.start.slice(5)}月に登録できます</span>`; }
     } else if(st==='k'){ pill='<span class="pill green">受注済み・開始前</span>'; act=`<span style="font-size:10px;color:var(--fg4);">${+x.start.slice(5)}月から売上に計上（顧客リストに登録済み）</span>`; }
     else { pill='<span class="pill amber">見込み（仮置き）</span>'; act=`<button class="ol-act" onclick="olConfirmProspect(${i})">確定にする</button>`; }
     return `<tr${x.registered?' style="opacity:.62;"':''}><td style="font-weight:600;">${x.co}</td><td>${OL_LINE[x.line]}</td><td>${x.plan}</td><td class="num">${fmt(x.amount)}</td><td style="font-family:var(--mono);font-size:11px;">${x.start.replace('-','/')}</td><td class="center">${pill}</td><td style="white-space:nowrap;">${act}</td></tr>`;
