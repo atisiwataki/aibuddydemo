@@ -3013,6 +3013,12 @@ function olRegisterDue(){
   let n=0; olDue().forEach(x=>{ if(olRegisterOne(x.i)) n++; });
   if(n){ olRefreshAll(); showToast(`開始月を迎えた契約 ${n}件を、顧問リストに登録しました`); }
 }
+function olDeleteRow(kind,i){
+  const O=olWritable(); if(!O) return;
+  const arr=kind==='c'?O.contracts:O.prospects, x=arr[i]; if(!x) return;
+  if(!confirm(`売上見通しから「${x.co}（${OL_LINE[x.line]}／${x.plan}／${fmt(x.amount)}／${x.start.replace('-','/')}開始）」を削除します。${kind==='c'&&x.registered?'\n※顧問リストに登録済みの契約です。顧問リストの顧客は消えません。':''}\n（顧問リストの顧客・営業管理の商談は消えません）よろしいですか？`)) return;
+  arr.splice(i,1); olRefreshAll(); showToast('売上見通しから削除しました');
+}
 function olConfirmProspect(i){
   const O=olWritable(); const p=O&&O.prospects[i]; if(!p) return;
   if(!confirm(`「${p.co}（${OL_LINE[p.line]}）」を確定にします（金額 ${fmt(p.amount)}／月、開始 ${p.start.replace('-','/')}）。`)) return;
@@ -3194,6 +3200,7 @@ function renderOutlook(){
       else { pill='<span class="pill green">確定</span>'; act=`<button class="ol-act" onclick="olMarkRegistered(${i})" title="同じ受注を、営業管理・顧問リストに登録済みのとき（二重計上を防ぎます）">顧問リストに登録済み</button><span style="font-size:10px;color:var(--fg4);">${+x.start.slice(5)}月に登録できます</span>`; }
     } else if(st==='k'){ pill='<span class="pill green">受注済み・開始前</span>'; act=`<span style="font-size:10px;color:var(--fg4);">${+x.start.slice(5)}月から売上に計上（顧客リストに登録済み）</span>`; }
     else { pill='<span class="pill amber">見込み（仮置き）</span>'; act=`<button class="ol-act" onclick="olConfirmProspect(${i})">確定にする</button>`; }
+    if(st!=='k') act+=`<button class="ol-act" style="color:#B91C1C;" onclick="olDeleteRow('${st}',${i})" title="この行を売上見通しから削除">削除</button>`;
     return `<tr${x.registered?' style="opacity:.62;"':''}><td style="font-weight:600;">${x.co}</td><td>${OL_LINE[x.line]}</td><td>${x.plan}</td><td class="num">${fmt(x.amount)}</td><td style="font-family:var(--mono);font-size:11px;">${x.start.replace('-','/')}</td><td class="center">${pill}</td><td style="white-space:nowrap;">${act}</td></tr>`;
   };
   const lineSum=ln=>O.contracts.filter(x=>x.line===ln).reduce((a,x)=>a+x.amount,0);
