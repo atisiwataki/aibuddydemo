@@ -105,6 +105,12 @@ html,body { height: 100%; font-family: var(--font); color: var(--fg); background
 .nav-item.active .ni-icon { filter: none; }
 
 .sidebar-staff { padding: 12px 10px; border-top: 1px solid rgba(255,255,255,.08); }
+/* サーバー保存の状態 */
+.sync-status { font-size:10px; line-height:1.4; padding:2px 10px 0 38px; color:rgba(255,255,255,.45); }
+.sync-status.ok { color:#86EFAC; }
+.sync-status.wait { color:#FDE68A; }
+.sync-status.err { color:#FCA5A5; }
+
 /* 担当者・チーム：格納式 */
 .ss-head { display:flex; align-items:center; gap:4px; }
 .ss-toggle { flex:1; min-width:0; display:flex; align-items:center; gap:6px; background:none; border:none; cursor:pointer; font-family:var(--font); font-size:9.5px; font-weight:600; color:rgba(255,255,255,.45); letter-spacing:.08em; text-transform:uppercase; padding:4px 8px; border-radius:6px; text-align:left; }
@@ -1051,7 +1057,7 @@ details.card[open] > summary::before { transform: rotate(90deg); }
     <button class="nav-item"        id="nav-outlook"    onclick="switchPage('outlook')">  <span class="ni-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 6-7"/></svg></span> 売上見通し</button>
   </div>
 
-  <div style="padding:0 10px 8px;"><button class="nav-item" id="nav-data" onclick="openDataModal()" style="font-size:12px;"><span class="ni-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></span> 保存・バックアップ</button></div>
+  <div style="padding:0 10px 8px;"><button class="nav-item" id="nav-data" onclick="openDataModal()" style="font-size:12px;"><span class="ni-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></span> 保存・バックアップ</button><div id="syncStatus" class="sync-status" hidden></div></div>
   <div class="sidebar-staff" id="sidebarStaff"></div>
 </div>
 
@@ -3245,12 +3251,17 @@ function persist(){
   }catch(err){
     if(!storeWarned){storeWarned=true;showToast('このブラウザではデータを保存できません（再読み込みで消えます）');}
   }
-  if(json){ saveDaySnapshot(json); idbPut('snap:'+STORE_KEY,json); fsSchedule(json); }
+  if(json){ saveDaySnapshot(json); idbPut('snap:'+STORE_KEY,json); fsSchedule(json); remoteChanged(); }
 }
 function restore(){
   try{
     const raw=localStorage.getItem(STORE_KEY); if(!raw) return;
-    const d=JSON.parse(raw); if(!d||d.v!==1) return;
+    applyData(JSON.parse(raw));
+  }catch(err){}
+}
+function applyData(d){
+  try{
+    if(!d||d.v!==1) return false;
     STAFF=d.staff||[];
     clientList.splice(0,clientList.length,...(d.clients||[]));
     events=d.events||[];
@@ -3260,7 +3271,8 @@ function restore(){
     nextDealId=Math.max(d.nextDealId||1,...deals.map(x=>x.id+1));
     olStore=d.outlook||null;
     olCfg=d.outlookCfg||null;
-  }catch(err){}
+    return true;
+  }catch(err){ return false; }
 }
 async function resetDemo(){
   resetting=true;
@@ -3330,6 +3342,7 @@ async function applyBackupText(text,opt){
   resetting=true;
   const json=JSON.stringify({...d,v:1});
   try{ localStorage.setItem(STORE_KEY,json); }catch(e){ showToast('保存できませんでした'); resetting=false; return false; }
+  if(remote.on) remoteMark(remote.rev,true);   // 再読み込み後、この内容をサーバーに送る
   await idbPut('snap:'+STORE_KEY,json);
   if(opt.fsHandle) await idbPut('fsHandle:'+STORE_KEY,opt.fsHandle);
   location.reload(); return true;
@@ -3373,6 +3386,7 @@ async function renderDataModal(){
     <div class="dm-grid">
       <span>データ</span><span>${cnt}</span>
       <span>最終保存</span><span>${saved?fmtD(saved.savedAt):'まだ保存されていません'}</span>
+      <span>サーバー保存</span><span>${DEMO?'<span style="color:var(--fg3);">デモ版は、このブラウザのみ</span>':remote.on?ok(remote.state==='ok','サーバーに保存'+(remote.state==='ok'?'済み':remote.state==='saving'?'中':'できません'))+` <span style="color:var(--fg3);font-size:11px;">版 ${remote.rev}${remote.by?'・最後に保存した方：'+remote.by:''}</span>`:'<span style="color:var(--fg3);">未設定（このブラウザのみに保存）</span>'}</span>
       <span>このブラウザに保存</span><span>${ok(!!saved,saved?'保存済み':'なし')}　<span style="color:var(--fg3);font-size:11px;">別の領域（IndexedDB）にも同じ内容 ${ok(!!idbSnap,idbSnap?'あり':'なし')}</span></span>
       <span>消えにくくする設定</span><span>${persisted===null?'<span style="color:var(--fg3);">確認できません</span>':ok(persisted,persisted?'許可済み':'ブラウザ任せ')}</span>
       <span>自動保存ファイル</span><span>${fsLine}</span>
@@ -3401,6 +3415,118 @@ async function renderDataModal(){
   <div class="dm-note">⚠ ブラウザの保存データは、サイトデータの削除・シークレットウィンドウ・Claudeアプリ内のブラウザを閉じたときなどに消えることがあります。<b>普段お使いの Chrome で開き、バックアップを書き出しておく</b>のがおすすめです。</div>`;
 }
 
+
+// ── サーバー保存（本番のみ）：Vercel の /api/data に保存し、複数人・複数PCで同じデータを使う ──
+// サーバー側の保存先（Upstash Redis）が未設定のときは、これまでどおり「このブラウザだけ」に保存する。
+// 同時に編集したときは、先に保存した人の内容が残る（後から保存した側は最新を読み込み直す）。
+const REMOTE_URL='api/data';
+const remote={on:false,rev:0,seq:0,busy:false,state:DEMO?'demo':'init',err:'',at:0,by:'',timer:null};
+function remoteDirty(){ try{ return localStorage.getItem(STORE_KEY+':dirty')==='1'; }catch(e){ return false; } }
+function remoteMark(rev,dirty){ try{ if(rev!=null) localStorage.setItem(STORE_KEY+':rev',String(rev)); if(dirty!=null) localStorage.setItem(STORE_KEY+':dirty',dirty?'1':'0'); }catch(e){} }
+async function remoteGet(q){
+  try{
+    const res=await fetch(REMOTE_URL+(q?'?rev='+q:''),{cache:'no-store'});
+    if(!res.ok) return null;
+    const j=await res.json(); return (j&&typeof j.rev==='number')?j:null;
+  }catch(e){ return null; }
+}
+function remoteChanged(){
+  if(!remote.on) return;
+  remote.seq++; remoteMark(null,true);
+  clearTimeout(remote.timer); remote.timer=setTimeout(remotePush,700);
+  remote.state='saving'; renderSyncStatus();
+}
+async function remotePush(){
+  if(!remote.on) return;
+  if(remote.busy){ clearTimeout(remote.timer); remote.timer=setTimeout(remotePush,500); return; }
+  remote.busy=true; const sent=remote.seq; remote.state='saving'; renderSyncStatus();
+  try{
+    const res=await fetch(REMOTE_URL,{method:'PUT',headers:{'content-type':'application/json'},cache:'no-store',body:JSON.stringify({baseRev:remote.rev,data:snapshot()})});
+    if(res.status===409){ const j=await res.json(); remote.busy=false; remoteConflict(j); return; }
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    const j=await res.json();
+    remote.rev=j.rev; remote.at=Date.now(); remote.by=(j.meta&&j.meta.by)||''; remote.err='';
+    const more=remote.seq!==sent;
+    remoteMark(j.rev,more); remote.state=more?'saving':'ok';
+    if(more){ clearTimeout(remote.timer); remote.timer=setTimeout(remotePush,300); }
+  }catch(e){
+    remote.state='error'; remote.err=String((e&&e.message)||e);
+    clearTimeout(remote.timer); remote.timer=setTimeout(remotePush,15000);   // つながったら自動で再送
+  }
+  remote.busy=false; renderSyncStatus();
+}
+// サーバーの内容をこの画面に反映する
+function remoteApply(r){
+  if(!r||!r.data||!applyData(r.data)) return false;
+  remote.rev=r.rev; remote.by=(r.meta&&r.meta.by)||''; remote.at=Date.now(); remote.state='ok';
+  try{ localStorage.setItem(STORE_KEY,JSON.stringify(r.data)); }catch(e){}
+  remoteMark(r.rev,false); idbPut('snap:'+STORE_KEY,JSON.stringify(r.data));
+  populateStaffSelects(); buildSidebarStaff(); switchPage(currentPage); renderSyncStatus();
+  return true;
+}
+function remoteConflict(r){
+  // 自分の未保存の内容は、念のため別の場所に控えてから、最新を読み込む
+  try{ localStorage.setItem(STORE_KEY+':conflict',JSON.stringify(snapshot())); }catch(e){}
+  remoteApply(r);
+  const who=(r.meta&&r.meta.by)?`「${r.meta.by}」さん`:'ほかの方';
+  alert(`${who}が先に更新していたため、最新のデータを読み込みました。\\nお手数ですが、直前の入力をもう一度お願いします。\\n（直前の内容は「:conflict」としてこのブラウザに控えてあります）`);
+}
+function remoteBusyUi(){
+  // 入力中・画面を開いている最中は、反映を後回しにする
+  const a=document.activeElement, t=a&&a.tagName;
+  if(t==='INPUT'||t==='TEXTAREA'||t==='SELECT') return true;
+  return !!document.querySelector('.overlay:not([hidden])');
+}
+async function remotePoll(){
+  if(!remote.on||remote.busy) return;
+  if(remote.state==='error'||remoteDirty()){ clearTimeout(remote.timer); remote.timer=setTimeout(remotePush,100); return; }
+  const r=await remoteGet(remote.rev);
+  if(!r){ remote.state='error'; remote.err='サーバーに接続できません'; renderSyncStatus(); return; }
+  if(r.unchanged||r.rev===remote.rev){ if(remote.state==='error'){ remote.state='ok'; renderSyncStatus(); } return; }
+  if(remoteBusyUi()||remoteDirty()) return;
+  const full=await remoteGet();
+  if(full&&full.data&&full.rev>remote.rev&&remoteApply(full)) showToast((full.meta&&full.meta.by?`「${full.meta.by}」さん`:'ほかの方')+'の更新を反映しました');
+}
+async function remoteInit(){
+  if(DEMO){ renderSyncStatus(); return; }
+  const r=await remoteGet();
+  if(!r){ remote.state='off'; renderSyncStatus(); return; }   // サーバー保存が未設定／接続できない
+  const lrev=+localStorage.getItem(STORE_KEY+':rev')||0, ldirty=remoteDirty();
+  if(r.rev===0||!r.data){
+    if(hasData()){
+      if(confirm('サーバー保存が使えるようになりました。\\nこのブラウザのデータをサーバーに登録します（以後、ほかのPC・ほかの方と同じデータを使えます）。よろしいですか？')){
+        remote.on=true; remote.rev=0; remoteChanged(); await remotePush();
+      } else { remote.state='off'; }
+    } else { remote.on=true; remote.rev=0; remote.state='ok'; }
+  } else if(ldirty&&lrev===r.rev){
+    remote.on=true; remote.rev=r.rev; remoteChanged(); await remotePush();   // 未送信の変更（復元など）をサーバーへ
+  } else {
+    remote.on=true;
+    if(ldirty&&lrev!==r.rev){ try{ localStorage.setItem(STORE_KEY+':conflict',localStorage.getItem(STORE_KEY)||''); }catch(e){} showToast('サーバーのデータが更新されていたため、最新を読み込みました'); }
+    remoteApply(r);
+  }
+  renderSyncStatus();
+  if(remote.on){
+    setInterval(remotePoll,20000);
+    document.addEventListener('visibilitychange',()=>{ if(!document.hidden) remotePoll(); });
+    addEventListener('online',()=>remotePoll());
+  }
+}
+function syncText(){
+  const t=remote.at?new Date(remote.at).toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'}):'';
+  if(remote.state==='ok') return {cls:'ok',t:'サーバーに保存済み'+(t?' '+t:'')};
+  if(remote.state==='saving') return {cls:'wait',t:'サーバーに保存中…'};
+  if(remote.state==='error') return {cls:'err',t:'サーバーに保存できません（自動で再送します）'};
+  if(remote.state==='off') return {cls:'off',t:'このブラウザのみに保存中'};
+  return null;
+}
+function renderSyncStatus(){
+  const el=document.getElementById('syncStatus');
+  if(el){ const x=syncText(); el.hidden=!x; if(x){ el.className='sync-status '+x.cls; el.textContent=x.t; } }
+  if(document.getElementById('dataOverlay')&&!document.getElementById('dataOverlay').hidden) renderDataModal();
+}
+addEventListener('beforeunload',ev=>{ if(remote.on&&(remote.state==='saving'||remote.state==='error'||remoteDirty())){ ev.preventDefault(); ev.returnValue=''; } });
+
 // ── 起動時：消えていたら自動で復元／別領域に同じ内容を控える ──
 async function bootData(){
   try{ if(navigator.storage&&navigator.storage.persist) await navigator.storage.persist(); }catch(e){}
@@ -3413,6 +3539,7 @@ async function bootData(){
   const cur=localStorage.getItem(STORE_KEY);
   if(cur){ saveDaySnapshot(cur); if(!(await idbGet('snap:'+STORE_KEY))) idbPut('snap:'+STORE_KEY,cur); }
   renderDataBanner();
+  await remoteInit();
 }
 // データを変更する操作のあとに自動保存
 ['saveStaff','deleteStaff','saveEvent','deleteEvent','deleteSeriesEvent','moveEvent','saveClient','execDeleteClient','saveDeal','closeDeal','deleteDeal','setDealTemp'].forEach(name=>{
@@ -3422,6 +3549,7 @@ async function bootData(){
 // ページ離脱時の自動保存はしない（別タブで登録した新しいデータを古い内容で上書きしないため。保存は各操作の直後に実行済み）
 // 別タブで保存されたら、このタブも最新データに切り替える
 addEventListener('storage',ev=>{
+  if(ev.key===STORE_KEY+':rev'&&ev.newValue!=null){ remote.rev=Math.max(remote.rev,+ev.newValue||0); return; }
   if(ev.key!==STORE_KEY||ev.newValue==null) return;
   restore();
   populateStaffSelects();buildSidebarStaff();
