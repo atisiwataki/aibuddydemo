@@ -1198,7 +1198,7 @@ details.card[open] > summary::before { transform: rotate(90deg); }
       <div class="field"><label id="cl-amount-label">月額（円）</label><input type="number" id="cl-amount" min="0" step="10000" placeholder="200000"><div id="cl-amount-hint" style="font-size:10px;color:var(--fg4);"></div></div>
       <div class="modal-row">
         <div class="field"><label>業種</label><input type="text" id="cl-industry" placeholder="製造業、IT など"></div>
-        <div class="field"><label>契約開始月</label><input type="month" id="cl-since"></div>
+        <div class="field"><label>契約開始月</label><input type="month" id="cl-since"><div style="font-size:10px;color:var(--fg4);margin-top:3px;line-height:1.5;">先の月にすると、開始月まで当月の数字に入らず、開始月から売上に計上</div></div>
       </div>
       <div class="field"><label>次回訪問予定日</label><div id="cl-next-picker" class="date-picker-wrap"></div><input type="hidden" id="cl-next"></div>
       <div class="field"><label>メモ・備考</label><input type="text" id="cl-memo" placeholder="課題・検討中の施策など"></div>
@@ -1349,6 +1349,9 @@ details.card[open] > summary::before { transform: rotate(90deg); }
       </div>
       <div class="modal-row">
         <div class="field"><label>受注予定月</label><input id="dl-close" type="month"></div>
+        <div class="field"><label>契約開始月（受注時）</label><input id="dl-start" type="month"><div style="font-size:10px;color:var(--fg4);margin-top:3px;line-height:1.5;">空欄＝当月から。先の月にすると、開始月まで当月の数字に入らず、開始月から売上に計上</div></div>
+      </div>
+      <div class="modal-row">
         <div class="field"><label>次回アクション期日</label><div id="dl-next-picker" class="date-picker-wrap"></div><input type="hidden" id="dl-next"></div>
       </div>
       <div class="field"><label>次回アクション</label><input id="dl-action" type="text" placeholder="例：見積書を送付して電話フォロー"></div>
@@ -1403,6 +1406,10 @@ const isMonthly=plan=>PLANS[plan]?.mrr>0;
 function clientMRR(c){return isMonthly(c.plan)?(c.fee!=null?c.fee:PLANS[c.plan].mrr):0;}
 function clientAmountLabel(c){return isMonthly(c.plan)?fmt(clientMRR(c)):(c.spot?`一括 ${fmt(c.spot)}`:'—');}
 const clientList = DEMO ? DEMO.clients : [];
+// 契約開始月が先の顧客＝「受注予定」。開始月になるまでは、当月の数字（稼働社数・MRR・目標の達成数）に入れない。
+// 売上見通し（年間の受注予定）には出て、開始月から売上（MRR・一括売上）に計上される。
+function liveClients(){ const cur=ymOf(TODAY); return clientList.filter(c=>!c.since||c.since<=cur); }
+function pendingClients(){ const cur=ymOf(TODAY); return clientList.filter(c=>c.since&&c.since>cur); }
 // MRR推移・月次レポート（顧客の契約開始月から算出。spot = プロジェクト型の一括売上）
 function ymOf(d){return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;}
 function monthlyStats(){
@@ -1745,11 +1752,12 @@ function switchPage(page){
 
 // ── HOME ── //
 function renderHome(){
+  const CL=liveClients();
   renderDataBanner();
   const hw=document.getElementById('hwDate');
   if(hw) hw.textContent=`${TODAY.getFullYear()}年${TODAY.getMonth()+1}月${TODAY.getDate()}日（${'日月火水木金土'[TODAY.getDay()]}）`;
-  const cnt=clientList.length;
-  const totalMRR=clientList.reduce((s,c)=>s+clientMRR(c),0);
+  const cnt=CL.length;
+  const totalMRR=CL.reduce((s,c)=>s+clientMRR(c),0);
   const pill=document.getElementById('clientCountPill2');
   if(pill) pill.textContent=cnt+'社';
   const nb=document.getElementById('nbClients');
@@ -2112,19 +2120,21 @@ function deleteSeriesEvent(){
 // ── CLIENTS ── //
 function renderClients(){
   const meta=document.getElementById('clientsMeta');
-  if(meta) meta.textContent=`担当者別クライアント一覧 · 合計 ${clientList.length}社`;
+  const pendN=pendingClients().length;
+  if(meta) meta.textContent=`担当者別クライアント一覧 · 稼働 ${liveClients().length}社${pendN?`（受注予定 ${pendN}社は開始月から計上）`:''}`;
   let html='';
   STAFF.forEach((s,si)=>{
     const myC=clientList.filter(c=>c.staff===si);
     // 営業チームは表示しない（担当顧客がいる場合のみ表示して顧客が隠れないようにする）
     if(staffTeam(s)==='sales'&&!myC.length) return;
-    const mrr=myC.reduce((sum,c)=>sum+clientMRR(c),0);
+    const curYM=ymOf(TODAY), liveC=myC.filter(c=>!c.since||c.since<=curYM);
+    const mrr=liveC.reduce((sum,c)=>sum+clientMRR(c),0);
     html+=`<div class="card" style="margin-bottom:12px;">
       <div class="section-hd">
         <span class="section-hd-title"><span class="staff-dot" style="background:${s.color};"></span>${s.name} <span style="color:var(--fg4);font-weight:400;font-size:11px;">${s.role}</span></span>
         <div style="display:flex;align-items:center;gap:8px;">
           <span style="font-size:11px;color:var(--fg3);">MRR <strong style="font-family:var(--mono);color:var(--fg);">${fmt(mrr)}</strong></span>
-          <span class="section-count">${myC.length}社</span>
+          <span class="section-count">${liveC.length}社${myC.length>liveC.length?` ＋予定${myC.length-liveC.length}`:''}</span>
         </div>
       </div>
       <div class="table-wrap">
@@ -2135,12 +2145,13 @@ function renderClients(){
       const plan=PLANS[c.plan];
       const nextEv=events.filter(e=>e.staff===si&&e.client===c.name&&e.date>=dateStr(TODAY)).sort((a,b)=>a.date>b.date?1:-1)[0];
       const nextLabel=nextEv?`${nextEv.date.slice(5).replace('-','/')} ${TYPE_LABEL[nextEv.type]}`:(c.nextVisit?`${c.nextVisit.slice(5).replace('-','/')} 予定`:'未定');
-      html+=`<tr>
-        <td class="link-cell" onclick="openClientModal(${c.id})" style="cursor:pointer;">${c.name}</td>
+      const pend=c.since&&c.since>ymOf(TODAY);
+      html+=`<tr${pend?' style="opacity:.72;"':''}>
+        <td class="link-cell" onclick="openClientModal(${c.id})" style="cursor:pointer;">${c.name}${pend?' <span class="pill amber" style="font-size:9.5px;">受注予定</span>':''}</td>
         <td><span class="pill" style="background:${plan.bg};color:${plan.color};">${plan.label}</span></td>
         <td style="font-size:11px;">${c.sales!=null&&STAFF[c.sales]?`<span style="display:inline-flex;align-items:center;gap:4px;"><span class="staff-dot" style="background:${STAFF[c.sales].color};"></span>${STAFF[c.sales].short}</span>`:'<span style="color:var(--fg4);">—</span>'}</td>
         <td>${c.industry}</td>
-        <td style="font-family:var(--mono);font-size:11px;">${c.since}</td>
+        <td style="font-family:var(--mono);font-size:11px;">${c.since}${pend?'<div style="font-size:9.5px;color:var(--amb);">この月から計上</div>':''}</td>
         <td class="num">${clientAmountLabel(c)}</td>
         <td style="font-size:11px;color:var(--fg2);">${nextLabel}</td>
         <td class="memo-cell" style="font-size:11px;color:var(--fg3);max-width:200px;">${c.memo}</td>
@@ -2163,13 +2174,14 @@ function renderClients(){
 
 // ── SALES ── //
 function renderSales(){
-  const totalMRR=clientList.reduce((s,c)=>s+clientMRR(c),0);
+  const CL=liveClients();
+  const totalMRR=CL.reduce((s,c)=>s+clientMRR(c),0);
   const MRR_HISTORY=monthlyStats().map(m=>({month:m.label,mrr:m.mrr}));
   const prevMRR=MRR_HISTORY.length>=2?MRR_HISTORY[MRR_HISTORY.length-2].mrr:0,diff=totalMRR-prevMRR;
-  const staffMRR=STAFF.map((_,i)=>clientList.filter(c=>c.staff===i).reduce((s,c)=>s+clientMRR(c),0));
+  const staffMRR=STAFF.map((_,i)=>CL.filter(c=>c.staff===i).reduce((s,c)=>s+clientMRR(c),0));
   const maxStaffMRR=Math.max(...staffMRR);
   const planCounts=Object.fromEntries(Object.keys(PLANS).map(k=>[k,0]));
-  clientList.forEach(c=>{planCounts[c.plan]=(planCounts[c.plan]||0)+1;});
+  CL.forEach(c=>{planCounts[c.plan]=(planCounts[c.plan]||0)+1;});
 
   const FC12=olSalesForecast(12), FC=FC12?FC12.rows.slice(0,SALES_FC_MONTHS):[];
   const CH=[...MRR_HISTORY.map(m=>({month:m.month,mrr:m.mrr,conf:m.mrr,fc:false})),...FC.map(r=>({month:(+r.ym.slice(5))+'月',mrr:Math.round(r.mrr),conf:Math.round(r.conf),fc:true}))];
@@ -2200,11 +2212,11 @@ function renderSales(){
   const ym=ymOf(TODAY);
   const trainings=events.filter(e=>e.type==='ev-training').sort((a,b)=>a.date<b.date?1:-1);
   const trMonth=trainings.filter(e=>e.date.startsWith(ym));
-  const projects=clientList.filter(c=>c.plan==='project').sort((a,b)=>a.since<b.since?1:-1);
+  const projects=CL.filter(c=>c.plan==='project').sort((a,b)=>a.since<b.since?1:-1);
   const pjMonth=projects.filter(c=>c.since===ym);
   const pjMonthFee=pjMonth.reduce((s,c)=>s+(c.spot||0),0);
   const pjTotal=projects.reduce((s,c)=>s+(c.spot||0),0);
-  const trClientFee=clientList.filter(c=>c.plan==='training'&&c.since===ym).reduce((s,c)=>s+(c.spot||0),0);
+  const trClientFee=CL.filter(c=>c.plan==='training'&&c.since===ym).reduce((s,c)=>s+(c.spot||0),0);
   const trMonthFee=trMonth.reduce((s,e)=>s+(e.fee||0),0)+trClientFee;
   const trDone=trMonth.filter(e=>e.date<=dateStr(TODAY)).reduce((s,e)=>s+(e.fee||0),0);
   const trPeople=trainings.reduce((s,e)=>s+(e.people||0),0);
@@ -2220,8 +2232,8 @@ function renderSales(){
   <div class="kpi-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:16px;">
     <div class="kpi-card blue"><div class="kpi-label">当月 MRR</div><div class="kpi-value" style="color:var(--primary);">${fmt(totalMRR)}</div><div class="kpi-diff"><span class="up">▲ ${fmt(diff)}</span>&nbsp;前月比</div></div>
     <div class="kpi-card green"><div class="kpi-label">ARR（年間換算）</div><div class="kpi-value">${fmt(totalMRR*12)}</div><div class="kpi-diff"><span class="up">▲ ${fmt(diff*12)}</span></div></div>
-    <div class="kpi-card amber"><div class="kpi-label">ARPU / 社</div><div class="kpi-value">${fmt((n=>n?Math.round(totalMRR/n):0)(clientList.filter(c=>isMonthly(c.plan)).length))}</div><div class="kpi-diff">月額平均</div></div>
-    <div class="kpi-card purple"><div class="kpi-label">稼働クライアント</div><div class="kpi-value">${clientList.length}社</div><div class="kpi-diff">目標 15社</div></div>
+    <div class="kpi-card amber"><div class="kpi-label">ARPU / 社</div><div class="kpi-value">${fmt((n=>n?Math.round(totalMRR/n):0)(CL.filter(c=>isMonthly(c.plan)).length))}</div><div class="kpi-diff">月額平均</div></div>
+    <div class="kpi-card purple"><div class="kpi-label">稼働クライアント</div><div class="kpi-value">${CL.length}社</div><div class="kpi-diff">目標 15社</div></div>
     <div class="kpi-card green"><div class="kpi-label">当月 研修売上</div><div class="kpi-value">${fmt(trMonthFee)}</div><div class="kpi-diff">実施済 ${fmt(trDone)} · ${trMonth.length}件${trClientFee?` · 研修契約 ${fmt(trClientFee)}`:''}</div></div>
     ${FC12?`<div class="kpi-card green" style="cursor:pointer;" onclick="switchPage('outlook')"><div class="kpi-label">今後12か月の売上見込み</div><div class="kpi-value">${fmt(Math.round(fcRev.reduce((a,x)=>a+x.rev,0)))}</div><div class="kpi-diff">うち確定のみ <b>${fmt(Math.round(fcRev.reduce((a,x)=>a+x.conf,0)))}</b></div></div>`:''}
     ${FC12?(()=>{const l=FC12.rows[FC12.rows.length-1], f=FC12.rows[0];return `<div class="kpi-card blue" style="cursor:pointer;" onclick="switchPage('outlook')"><div class="kpi-label">12か月後のMRR（見通し）</div><div class="kpi-value">${fmt(Math.round(l.mrr))}</div><div class="kpi-diff">${totalMRR>0?`現在の <b>${(l.mrr/totalMRR).toFixed(1)}倍</b> ／ `:''}${(+f.ym.slice(5))}月〜の確定 ${fmt(f.base)}</div></div>`;})():''}
@@ -2233,9 +2245,9 @@ function renderSales(){
     <div class="card"><div class="card-header"><span class="card-title">プラン別 構成</span></div>
       <div class="card-body">
         ${['standard','light','aio_standard','aio_light','project','training'].map(pk=>{
-          const p=PLANS[pk];const cnt=planCounts[pk]||0;const list=clientList.filter(c=>c.plan===pk);
+          const p=PLANS[pk];const cnt=planCounts[pk]||0;const list=CL.filter(c=>c.plan===pk);
           const mrr=isMonthly(pk)?list.reduce((s,c)=>s+clientMRR(c),0):list.reduce((s,c)=>s+(c.spot||0),0);
-          const base=isMonthly(pk)?totalMRR:clientList.filter(c=>!isMonthly(c.plan)).reduce((s,c)=>s+(c.spot||0),0);
+          const base=isMonthly(pk)?totalMRR:CL.filter(c=>!isMonthly(c.plan)).reduce((s,c)=>s+(c.spot||0),0);
           const pct=base>0?Math.round(mrr/base*100):0;
           return `<div class="plan-row">
             <div class="plan-swatch" style="background:${p.color};"></div>
@@ -2252,7 +2264,7 @@ function renderSales(){
       <div class="card-body">
         ${STAFF.map((s,i)=>{
           const mrr=staffMRR[i];const pct=maxStaffMRR>0?Math.round(mrr/maxStaffMRR*100):0;
-          const cnt=clientList.filter(c=>c.staff===i).length;
+          const cnt=CL.filter(c=>c.staff===i).length;
           return `<div class="hbar-row">
             <div class="hbar-label">${s.name}</div>
             <div class="hbar-track"><div class="hbar-fill" style="width:${pct}%;background:${s.color};"><span>${fmt(mrr)}</span></div></div>
@@ -2263,7 +2275,7 @@ function renderSales(){
     </div>
     <div class="card"><div class="card-header"><span class="card-title">営業担当別 獲得売上</span></div>
       <div class="card-body">
-        ${(()=>{const rows=STAFF.map((st,i)=>{const l=clientList.filter(c=>c.sales===i);return {st,cnt:l.length,mrr:l.reduce((a,c)=>a+clientMRR(c),0),one:l.reduce((a,c)=>a+(isMonthly(c.plan)?0:(c.spot||0)),0)};}).filter(r=>r.cnt>0).sort((a,b)=>b.mrr-a.mrr);
+        ${(()=>{const rows=STAFF.map((st,i)=>{const l=CL.filter(c=>c.sales===i);return {st,cnt:l.length,mrr:l.reduce((a,c)=>a+clientMRR(c),0),one:l.reduce((a,c)=>a+(isMonthly(c.plan)?0:(c.spot||0)),0)};}).filter(r=>r.cnt>0).sort((a,b)=>b.mrr-a.mrr);
           const mx=Math.max(1,...rows.map(r=>r.mrr));
           return rows.map(r=>`<div class="hbar-row">
             <div class="hbar-label">${r.st.name}</div>
@@ -2274,7 +2286,7 @@ function renderSales(){
     </div>
     <div class="card"><div class="card-header"><span class="card-title">クライアント別 MRR</span></div>
       <div class="card-body">
-        ${(()=>{const maxC=Math.max(1,...clientList.map(clientMRR));return clientList.filter(c=>clientMRR(c)>0).sort((a,b)=>clientMRR(b)-clientMRR(a)).map(c=>{
+        ${(()=>{const maxC=Math.max(1,...CL.map(clientMRR));return CL.filter(c=>clientMRR(c)>0).sort((a,b)=>clientMRR(b)-clientMRR(a)).map(c=>{
           const mrr=clientMRR(c);const pct=Math.round(mrr/maxC*100);
           return `<div class="hbar-row">
             <div class="hbar-label" title="${c.name}">${c.name}</div>
@@ -2336,12 +2348,13 @@ function renderSales(){
 
 // ── DASHBOARD ── //
 function renderDashboard(){
-  const totalMRR=clientList.reduce((s,c)=>s+clientMRR(c),0);
+  const CL=liveClients();
+  const totalMRR=CL.reduce((s,c)=>s+clientMRR(c),0);
   const MRR_HISTORY=monthlyStats().map(m=>({month:m.label,mrr:m.mrr}));
   const prevMRR=MRR_HISTORY.length>=2?MRR_HISTORY[MRR_HISTORY.length-2].mrr:0,diff=totalMRR-prevMRR;
-  const staffMRR=STAFF.map((_,i)=>clientList.filter(c=>c.staff===i).reduce((s,c)=>s+clientMRR(c),0));
+  const staffMRR=STAFF.map((_,i)=>CL.filter(c=>c.staff===i).reduce((s,c)=>s+clientMRR(c),0));
   const planCounts=Object.fromEntries(Object.keys(PLANS).map(k=>[k,0]));
-  clientList.forEach(c=>planCounts[c.plan]=(planCounts[c.plan]||0)+1);
+  CL.forEach(c=>planCounts[c.plan]=(planCounts[c.plan]||0)+1);
 
   const W=500,H=140,PL=46,PR=16,PT=14,PB=28;
   let mrrSVG='<div style="color:var(--fg4);font-size:12px;padding:40px 0;text-align:center;">MRR履歴データなし</div>';
@@ -2369,7 +2382,7 @@ function renderDashboard(){
 
   const PLAN_SHORT={project:'PJT型',aio_standard:'AIOスタンダード',aio_light:'AIOライト'};
   const planPct=['standard','light','aio_standard','aio_light','project','training'].map(k=>({label:PLAN_SHORT[k]||PLANS[k].label,val:planCounts[k]||0,color:PLANS[k].color}));
-  const total=clientList.length;
+  const total=CL.length;
   let cumAngle=0;
   const r=40,cx=60,cy=62,stroke=14;
   const arcs=planPct.map(p=>{
@@ -2402,7 +2415,7 @@ function renderDashboard(){
     return {total:wkEvs.length,byType};
   });
 
-  const healthRows=clientList.map(c=>{
+  const healthRows=CL.map(c=>{
     const daysAgo=Math.floor((TODAY-new Date(c.since+'-01'))/(1000*60*60*24*30));
     const evCount=events.filter(e=>e.client===c.name).length;
     const hasNext=events.find(e=>e.client===c.name&&e.date>=dateStr(TODAY));
@@ -2419,8 +2432,8 @@ function renderDashboard(){
   <div class="kpi-grid" style="grid-template-columns:repeat(5,1fr);margin-bottom:16px;">
     <div class="kpi-card blue"><div class="kpi-label">MRR</div><div class="kpi-value" style="color:var(--primary);">${fmt(totalMRR)}</div><div class="kpi-diff"><span class="up">▲ ${fmt(diff)}</span> 前月比</div></div>
     <div class="kpi-card green"><div class="kpi-label">ARR</div><div class="kpi-value">${fmt(totalMRR*12)}</div><div class="kpi-diff">年間換算</div></div>
-    <div class="kpi-card amber"><div class="kpi-label">稼働クライアント</div><div class="kpi-value">${clientList.length}<span style="font-size:12px;">社</span></div><div class="kpi-diff">目標 15社</div></div>
-    <div class="kpi-card purple"><div class="kpi-label">ARPU</div><div class="kpi-value">${fmt((n=>n?Math.round(totalMRR/n):0)(clientList.filter(c=>isMonthly(c.plan)).length))}</div><div class="kpi-diff">/ 社・月</div></div>
+    <div class="kpi-card amber"><div class="kpi-label">稼働クライアント</div><div class="kpi-value">${CL.length}<span style="font-size:12px;">社</span></div><div class="kpi-diff">目標 15社</div></div>
+    <div class="kpi-card purple"><div class="kpi-label">ARPU</div><div class="kpi-value">${fmt((n=>n?Math.round(totalMRR/n):0)(CL.filter(c=>isMonthly(c.plan)).length))}</div><div class="kpi-diff">/ 社・月</div></div>
     <div class="kpi-card red"><div class="kpi-label">今週アクション</div><div class="kpi-value">${events.filter(e=>e.date>=dateStr(weekStart)&&e.date<=dateStr(addDays(weekStart,4))).length}<span style="font-size:12px;">件</span></div><div class="kpi-diff">訪問+MTG+報告</div></div>
   </div>
 
@@ -2603,11 +2616,11 @@ function saveClient(){
     const idx=clientList.findIndex(x=>x.id===editClientId);
     if(idx>=0) clientList[idx]={...clientList[idx],name,staff,plan,industry,since,nextVisit,memo,...money};
     closeClientModal();
-    showToast(`${name} を更新しました`);
+    showToast(`${name} を更新しました`+(since>ymOf(TODAY)?`（${since.replace('-','/')}から売上に計上）`:''));
   } else {
     clientList.push({id:nextClientId++,name,staff,plan,industry,since,nextVisit,memo,...money});
     closeClientModal();
-    showToast(`${name} を登録しました`);
+    showToast(`${name} を登録しました`+(since>ymOf(TODAY)?`（${since.replace('-','/')}から売上に計上）`:''));
   }
   if(currentPage==='clients') renderClients();
   if(currentPage==='dashboard') renderDashboard();
@@ -2662,6 +2675,7 @@ function dealValue(d){return PRODUCTS[d.product]?.monthly?(d.amount||0)*12:(d.am
 function dealAmountLabel(d){return PRODUCTS[d.product]?.monthly?`${fmt(d.amount||0)}/月`:fmt(d.amount||0);}
 
 function renderPipeline(){
+  const CL=liveClients();
   const mine=d=>staffMatch(d.staff);
   const open=deals.filter(d=>d.status==='open'&&mine(d));
   const closed=deals.filter(d=>d.status!=='open'&&mine(d)).sort((a,b)=>(b.closedAt||'')>(a.closedAt||'')?1:-1);
@@ -2726,7 +2740,7 @@ function renderPipeline(){
         ${(()=>{
           const tile=k=>{
             const pl=PLANS[k], goal=PLAN_TARGETS[k];
-            const have=clientList.filter(c=>c.plan===k).length;
+            const have=CL.filter(c=>c.plan===k).length;
             const dl=deals.filter(d=>d.status==='open'&&d.product===k);
             const hot=dl.filter(d=>d.temp==='hot').length;
             const left=Math.max(0,goal-have), pct=Math.min(100,Math.round(have/goal*100));
@@ -2738,12 +2752,12 @@ function renderPipeline(){
               <div class="tt-meta sub"><span>商談中 ${dl.length}件（うちHOT ${hot}件）</span><span>目標時MRR ${fmt(pl.mrr*goal)}</span></div>
             </div>`;};
           const groups=TARGET_GROUPS.map(g=>{
-            const goal=g.keys.reduce((a,k)=>a+PLAN_TARGETS[k],0), have=clientList.filter(c=>g.keys.includes(c.plan)).length;
+            const goal=g.keys.reduce((a,k)=>a+PLAN_TARGETS[k],0), have=CL.filter(c=>g.keys.includes(c.plan)).length;
             const mg=g.keys.reduce((a,k)=>a+PLAN_TARGETS[k]*PLANS[k].mrr,0);
             return `<div class="tg-title"><b>${g.name}</b><span>目標 ${goal}社（契約中 ${have}社）　目標時MRR ${fmt(mg)}/月</span></div>`+g.keys.map(tile).join('');
           }).join('');
           const goal=targetTotal(), keys=Object.keys(PLAN_TARGETS);
-          const have=clientList.filter(c=>keys.includes(c.plan)).length;
+          const have=CL.filter(c=>keys.includes(c.plan)).length;
           const pct=Math.min(100,Math.round(have/goal*100)), mrrGoal=targetMRR();
           const total=`<div class="target-tile tt-total" style="border-top-color:#6366F1;">
             <div class="tt-head"><span class="tt-name" style="color:#4F46E5;">合計</span><span class="tt-price">AI伴走＋AIO（${keys.length}プラン）</span></div>
@@ -2842,6 +2856,7 @@ function openDealModal(id=null){
   document.getElementById('dl-product').value=v('product','standard');
   document.getElementById('dl-amount').value=v('amount',300000);
   document.getElementById('dl-close').value=v('closeMonth','');
+  document.getElementById('dl-start').value=v('startMonth','');
   document.getElementById('dl-action').value=v('nextAction','');
   document.getElementById('dl-memo').value=v('memo','');
   document.getElementById('dl-next').value=v('nextDate','');
@@ -2868,6 +2883,7 @@ function readDealForm(){
     product:document.getElementById('dl-product').value,
     amount:parseInt(document.getElementById('dl-amount').value)||0,
     closeMonth:document.getElementById('dl-close').value,
+    startMonth:document.getElementById('dl-start').value,
     nextAction:document.getElementById('dl-action').value.trim(),
     nextDate:document.getElementById('dl-next').value,
     memo:document.getElementById('dl-memo').value.trim(),
@@ -2884,15 +2900,16 @@ function saveDeal(){
 function closeDeal(result){
   const d=deals.find(x=>x.id===editDealId);if(!d)return;
   Object.assign(d,readDealForm());
-  if(result==='won'&&!confirm(`${d.company} を受注にしますか？\n顧問リストにも追加されます。`))return;
+  const startYM=d.startMonth||ymOf(TODAY), later=startYM>ymOf(TODAY);
+  if(result==='won'&&!confirm(`${d.company} を受注にしますか？\n顧問リストにも追加されます。`+(later?`\n契約開始は ${startYM.replace('-','/')} です。開始月までは当月の数字に入らず、売上見通し（年間の受注予定）に入ります。`:'')))return;
   if(result==='lost'&&!confirm(`${d.company} を失注にしますか？`))return;
   d.status=result;d.closedAt=dateStr(TODAY);
   let msg=`${d.company} を${result==='won'?'受注':'失注'}にしました`;
   // 受注した顧問・プロジェクト型は顧問リストへ
   if(result==='won'&&!clientList.some(c=>c.name===d.company)){
-    clientList.push({id:nextClientId++,name:d.company,staff:d.staff,plan:d.product,industry:d.industry||'未分類',since:ymOf(TODAY),
+    clientList.push({id:nextClientId++,name:d.company,staff:d.staff,plan:d.product,industry:d.industry||'未分類',since:startYM,
       ...(isMonthly(d.product)?{fee:d.amount}:{spot:d.amount}),sales:d.staff,nextVisit:d.nextDate||dateStr(TODAY),memo:d.memo||''});
-    msg+='（顧問リストに追加）';
+    msg+=later?`（顧問リストに追加・${startYM.replace('-','/')}から売上に計上）`:'（顧問リストに追加）';
   }
   closeDealModal();renderPipeline();showToast(msg);
 }
@@ -2923,11 +2940,15 @@ function olDefaults(O){
 function ymAdd(ym,n){const [y,m]=ym.split('-').map(Number);const d=new Date(y,m-1+n,1);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');}
 function ymDiff(a,b){const [y1,m1]=a.split('-').map(Number),[y2,m2]=b.split('-').map(Number);return (y2-y1)*12+(m2-m1);}
 const olMan=v=>Math.round(v/10000).toLocaleString('ja-JP')+'万';
+// 顧客リストに「契約開始月が先」で入っている月額の受注＝年間の受注予定（売上見通しに出る）。売上管理の見通しは登録済み顧客として別に数えるので、二重にならないよう除く。
+function olPendingRows(){
+  return pendingClients().filter(c=>isMonthly(c.plan)).map(c=>({co:c.name,line:String(c.plan).startsWith('aio')?'aio':'ai',plan:PLANS[c.plan].label,amount:clientMRR(c),start:c.since,registered:false,fromClient:true,clientId:c.id}));
+}
 function olCompute(cfg,months,opt){
   const O=olData(), rows=[];
   const first=(opt&&opt.first)||O.start, skipReg=!!(opt&&opt.skipRegistered);   // skipRegistered：顧問リストに登録済みの契約は除く（登録済み顧客と二重にならないように）
   const pick=a=>skipReg?a.filter(c=>!c.registered):a;
-  const cts=pick(O.contracts), prs=pick(O.prospects);
+  const cts=pick(O.contracts).concat(skipReg?[]:olPendingRows()), prs=pick(O.prospects);
   const from=(skipReg&&cfg.from<first)?first:cfg.from;
   for(let i=0;i<months;i++){
     const ym=ymAdd(first,i);
@@ -3161,7 +3182,7 @@ function renderOutlook(){
   }
   if(!olCfg) olCfg=olDefaults(O);
   const c=olCfg;
-  const confirmedSum=O.contracts.reduce((a,x)=>a+x.amount,0), prosSum=O.prospects.reduce((a,x)=>a+x.amount,0);
+  const confirmedSum=O.contracts.reduce((a,x)=>a+x.amount,0)+olPendingRows().reduce((a,x)=>a+x.amount,0), prosSum=O.prospects.reduce((a,x)=>a+x.amount,0);
   const field=(id,label,val,step,suffix)=>`<div class="ol-f"><label>${label}</label><div class="ol-in"><input id="${id}" type="number" min="0" step="${step}" value="${val}" oninput="olRead()"><span>${suffix}</span></div></div>`;
   const cur=ymOf(TODAY);
   const tr=(x,st,i)=>{
@@ -3170,7 +3191,8 @@ function renderOutlook(){
       if(x.registered) pill='<span class="pill blue">登録済み</span>';
       else if(x.start<=cur){ pill='<span class="pill red">要登録</span>'; act=`<button class="ol-act primary" onclick="olRegister(${i})">顧問リストに登録</button><button class="ol-act" onclick="olMarkRegistered(${i})" title="顧問リストに手で登録済みのとき">登録済み扱い</button>`; }
       else { pill='<span class="pill green">確定</span>'; act=`<span style="font-size:10px;color:var(--fg4);">${+x.start.slice(5)}月に登録できます</span>`; }
-    } else { pill='<span class="pill amber">見込み（仮置き）</span>'; act=`<button class="ol-act" onclick="olConfirmProspect(${i})">確定にする</button>`; }
+    } else if(st==='k'){ pill='<span class="pill green">受注済み・開始前</span>'; act=`<span style="font-size:10px;color:var(--fg4);">${+x.start.slice(5)}月から売上に計上（顧客リストに登録済み）</span>`; }
+    else { pill='<span class="pill amber">見込み（仮置き）</span>'; act=`<button class="ol-act" onclick="olConfirmProspect(${i})">確定にする</button>`; }
     return `<tr${x.registered?' style="opacity:.62;"':''}><td style="font-weight:600;">${x.co}</td><td>${OL_LINE[x.line]}</td><td>${x.plan}</td><td class="num">${fmt(x.amount)}</td><td style="font-family:var(--mono);font-size:11px;">${x.start.replace('-','/')}</td><td class="center">${pill}</td><td style="white-space:nowrap;">${act}</td></tr>`;
   };
   const lineSum=ln=>O.contracts.filter(x=>x.line===ln).reduce((a,x)=>a+x.amount,0);
@@ -3209,7 +3231,7 @@ function renderOutlook(){
     <div class="card-header" style="padding:14px 18px 8px;"><span class="card-title">もとになっている契約・案件</span><span class="section-count">確定 ${O.contracts.length}件 ／ 見込み ${O.prospects.length}件</span></div>
     <div class="table-wrap"><table class="dt">
       <thead><tr><th>お客様</th><th>ライン</th><th>プラン</th><th class="num">月額</th><th>開始月</th><th class="center">状態</th><th>操作</th></tr></thead>
-      <tbody>${O.contracts.map((x,i)=>tr(x,'c',i)).join('')}${O.prospects.map((x,i)=>tr(x,'p',i)).join('')}</tbody>
+      <tbody>${O.contracts.map((x,i)=>tr(x,'c',i)).join('')}${olPendingRows().map(x=>tr(x,'k',0)).join('')}${O.prospects.map((x,i)=>tr(x,'p',i)).join('')}</tbody>
     </table></div>
     <div style="padding:10px 18px 14px;font-size:10.5px;color:var(--fg3);line-height:1.7;">${note}<br>開始月を迎えた契約は「顧問リストに登録」を押すと、実績（売上管理・顧問リスト）に移ります。移した契約は、売上管理の見通しからは外れます（二重計上の防止）。</div>
   </div>`;
