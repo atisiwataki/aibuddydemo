@@ -105,6 +105,10 @@ html,body { height: 100%; font-family: var(--font); color: var(--fg); background
 .nav-item.active .ni-icon { filter: none; }
 
 .sidebar-staff { padding: 12px 10px; border-top: 1px solid rgba(255,255,255,.08); }
+.cl-seg { display:flex; gap:0; background:var(--page-bg); border:1px solid var(--border); border-radius:10px; padding:3px; }
+.cl-seg button { flex:1; border:none; background:none; font-family:var(--font); font-size:12px; font-weight:700; color:var(--fg3); padding:7px 8px; border-radius:8px; cursor:pointer; }
+.cl-seg button.on { background:#fff; color:var(--primary); box-shadow:0 1px 4px rgba(26,29,46,.12); }
+.cl-seg button#cl-st-prospect.on { color:#B45309; }
 /* サーバー保存の状態 */
 .sync-status { font-size:10px; line-height:1.4; padding:2px 10px 0 38px; color:rgba(255,255,255,.45); }
 .sync-status.ok { color:#86EFAC; }
@@ -1189,6 +1193,12 @@ details.card[open] > summary::before { transform: rotate(90deg); }
   <div class="modal" style="max-width:480px;">
     <div class="modal-header green" id="clientModalHeader">お客様を登録 <button class="modal-close" onclick="closeClientModal()">✕</button></div>
     <div class="modal-body">
+      <div id="cl-status-row" class="cl-seg" style="grid-column:1/-1;">
+        <button type="button" id="cl-st-won" class="on" onclick="setClientStatus('won')">受注済み</button>
+        <button type="button" id="cl-st-prospect" onclick="setClientStatus('prospect')">未受注（見込み）</button>
+      </div>
+      <div id="cl-prospect-note" style="display:none;grid-column:1/-1;font-size:11px;line-height:1.7;color:#92400E;background:#FFFBEB;border:1px solid #FDE68A;border-radius:10px;padding:8px 12px;margin-bottom:10px;">未受注は、顧客ではなく「営業管理の商談」として登録します。当月の売上・稼働社数には入らず、「未受注の見込み（最大）」に入ります。受注が決まったら、営業管理で「受注」にすると顧問リストに入ります。</div>
+      <div class="field" id="cl-temp-row" style="display:none;"><label>見込み度</label><select id="cl-temp"><option value="hot">HOT（受注間近）</option><option value="warm" selected>WARM（検討中）</option><option value="cool">COOL（情報収集段階）</option></select></div>
       <div class="field" style="grid-column:1/-1;"><label>会社名 <span style="color:var(--red);">*</span></label><input type="text" id="cl-name" placeholder="株式会社〇〇"></div>
       <div class="modal-row">
         <div class="field"><label>担当者（コンサル） *</label><select id="cl-staff"></select></div>
@@ -2543,9 +2553,24 @@ function renderDashboard(){
 let nextClientId=100;
 let editClientId=null;
 
+let clStatus='won';
+function setClientStatus(v){
+  clStatus=v; const pr=v==='prospect';
+  document.getElementById('cl-st-won').classList.toggle('on',!pr);
+  document.getElementById('cl-st-prospect').classList.toggle('on',pr);
+  document.getElementById('cl-prospect-note').style.display=pr?'':'none';
+  document.getElementById('cl-temp-row').style.display=pr?'':'none';
+  document.getElementById('cl-since').previousElementSibling.textContent=pr?'契約開始（予定）月':'契約開始月';
+  document.getElementById('cl-sales').previousElementSibling.textContent=pr?'営業担当':'営業担当（受注した人）';
+  document.getElementById('cl-next').parentElement.querySelector('label').textContent=pr?'次回アクション期日':'次回訪問予定日';
+  document.getElementById('clientSaveBtn').textContent=pr?'商談として登録する':'登録する';
+  document.getElementById('clientModalHeader').childNodes[0].textContent=pr?'未受注の案件を登録 ':'お客様を登録 ';
+}
 function openClientModal(id=null){
   editClientId=id;
   const isEdit=id!==null;
+  document.getElementById('cl-status-row').style.display=isEdit?'none':'';
+  setClientStatus('won');
   const hdr=document.getElementById('clientModalHeader');
   const btn=document.getElementById('clientSaveBtn');
   if(hdr) hdr.childNodes[0].textContent=isEdit?'顧客を編集 ':'お客様を登録 ';
@@ -2612,6 +2637,19 @@ function saveClient(){
   const salesV=document.getElementById('cl-sales').value;
   money.sales=salesV===''?null:parseInt(salesV);
 
+  if(editClientId===null&&clStatus==='prospect'){
+    // 未受注：顧客ではなく、営業管理の商談として登録（当月の数字には入れない）
+    const firstSales=STAFF.findIndex(st=>staffTeam(st)==='sales');
+    const dealStaff=money.sales!=null?money.sales:(firstSales>=0?firstSales:staff);
+    const startRaw=document.getElementById('cl-since').value;
+    deals.push({id:nextDealId++,status:'open',createdAt:dateStr(TODAY),updatedAt:dateStr(TODAY),company:name,contact:'',industry:industry==='未分類'?'':industry,staff:dealStaff,
+      temp:document.getElementById('cl-temp').value,stage:0,source:'紹介',product:plan,amount:isMonthly(plan)?money.fee:money.spot,closeMonth:'',startMonth:(startRaw&&startRaw>ymOf(TODAY))?startRaw:'',
+      nextAction:'',nextDate:document.getElementById('cl-next').value||'',memo});
+    closeClientModal();
+    showToast(`${name} を未受注の商談として登録しました（営業管理で確認できます）`);
+    if(currentPage==='pipeline') renderPipeline();
+    return;
+  }
   if(editClientId!==null){
     const idx=clientList.findIndex(x=>x.id===editClientId);
     if(idx>=0) clientList[idx]={...clientList[idx],name,staff,plan,industry,since,nextVisit,memo,...money};
@@ -2732,7 +2770,7 @@ function renderPipeline(){
 
   <div class="kpi-grid" style="margin-bottom:16px;">
     <div class="kpi-card blue"><div class="kpi-label">進行中の商談</div><div class="kpi-value">${open.length}<span style="font-size:12px;">件</span></div><div class="kpi-diff">総額（年額） ${fmt(open.reduce((s,d)=>s+dealValue(d),0))}</div></div>
-    ${(()=>{const pt=dealsPotential(open);return `<div class="kpi-card amber"><div class="kpi-label">未受注の見込み（最大・月額）</div><div class="kpi-value">${fmt(pt.monthly)}<span style="font-size:12px;">/月</span></div><div class="kpi-diff">HOT ${olMan(pt.byTemp.hot)} ／ WARM ${olMan(pt.byTemp.warm)} ／ COOL ${olMan(pt.byTemp.cool)}${pt.oneN?`<br>＋一括（プロジェクト・研修）${pt.oneN}件 ${fmt(pt.oneTime)}`:''}</div></div>`;})()}
+    ${(()=>{const pt=dealsPotential(open);return `<div class="kpi-card amber"><div class="kpi-label">未受注の見込み（最大・月額）</div><div class="kpi-value" style="font-size:22px;white-space:nowrap;">${fmt(pt.monthly)}<span style="font-size:11px;">/月</span></div><div class="kpi-diff">HOT ${olMan(pt.byTemp.hot)} ／ WARM ${olMan(pt.byTemp.warm)} ／ COOL ${olMan(pt.byTemp.cool)}${pt.oneN?`<br>＋一括（プロジェクト・研修）${pt.oneN}件 ${fmt(pt.oneTime)}`:''}</div></div>`;})()}
     <div class="kpi-card purple"><div class="kpi-label">加重見込み金額（年額）</div><div class="kpi-value">${fmt(Math.round(weighted))}</div><div class="kpi-diff">月額商材は×12 · HOT70% / WARM40% / COOL10%</div></div>
     <div class="kpi-card green"><div class="kpi-label">今月の受注</div><div class="kpi-value">${wonM.length}<span style="font-size:12px;">件</span></div><div class="kpi-diff">${fmt(wonM.reduce((s,d)=>s+dealValue(d),0))}（年額換算）</div></div>
     <div class="kpi-card amber"><div class="kpi-label">受注率</div><div class="kpi-value">${won+lost?Math.round(won/(won+lost)*100):0}<span style="font-size:12px;">%</span></div><div class="kpi-diff">受注 ${won} / 失注 ${lost}</div></div>
