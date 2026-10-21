@@ -105,6 +105,18 @@ html,body { height: 100%; font-family: var(--font); color: var(--fg); background
 .nav-item.active .ni-icon { filter: none; }
 
 .sidebar-staff { padding: 12px 10px; border-top: 1px solid rgba(255,255,255,.08); }
+/* 担当者・チーム：格納式 */
+.ss-head { display:flex; align-items:center; gap:4px; }
+.ss-toggle { flex:1; min-width:0; display:flex; align-items:center; gap:6px; background:none; border:none; cursor:pointer; font-family:var(--font); font-size:9.5px; font-weight:600; color:rgba(255,255,255,.45); letter-spacing:.08em; text-transform:uppercase; padding:4px 8px; border-radius:6px; text-align:left; }
+.ss-toggle:hover { background:rgba(255,255,255,.07); color:#fff; }
+.ss-chev { width:10px; height:10px; flex-shrink:0; transition:transform .18s; }
+.ss-open .ss-chev { transform:rotate(90deg); }
+.ss-now { margin-left:auto; max-width:84px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; text-transform:none; letter-spacing:0; font-weight:600; color:#A5B4FC; background:rgba(165,180,252,.14); border-radius:8px; padding:0 7px; line-height:16px; }
+.ss-open .ss-now { display:none; }
+.ss-add { background:rgba(255,255,255,.12); border:none; color:rgba(255,255,255,.7); border-radius:5px; width:20px; height:20px; cursor:pointer; font-size:14px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.ss-add:hover { background:rgba(255,255,255,.22); color:#fff; }
+.ss-body { display:none; padding-top:6px; }
+.ss-open .ss-body { display:block; }
 .sidebar-staff-label { font-size: 9.5px; font-weight: 600; color: rgba(255,255,255,.35); letter-spacing: .08em; text-transform: uppercase; padding: 4px 8px 8px; }
 .staff-chip {
   display: flex;
@@ -1040,15 +1052,7 @@ details.card[open] > summary::before { transform: rotate(90deg); }
   </div>
 
   <div style="padding:0 10px 8px;"><button class="nav-item" id="nav-data" onclick="openDataModal()" style="font-size:12px;"><span class="ni-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></span> 保存・バックアップ</button></div>
-  <div class="sidebar-staff" id="sidebarStaff">
-    <div class="sidebar-staff-label" style="display:flex;align-items:center;justify-content:space-between;">
-      担当者・チーム
-      <button onclick="openStaffModal()" style="background:rgba(255,255,255,.12);border:none;color:rgba(255,255,255,.7);border-radius:5px;width:20px;height:20px;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;flex-shrink:0;" title="担当者を追加">+</button>
-    </div>
-    <button class="staff-chip active" id="ssc-all" onclick="setStaff('all')">
-      <div class="staff-avatar" style="background:#6B7280;">全</div>全員表示
-    </button>
-  </div>
+  <div class="sidebar-staff" id="sidebarStaff"></div>
 </div>
 
 <!-- CONTENT -->
@@ -1658,13 +1662,21 @@ function deleteStaff(i){
 }
 
 // ── BUILD SIDEBAR STAFF ── //
+let staffMenuOpen=(()=>{ try{ return localStorage.getItem('aibuddy-portal:ui:staffMenu')==='open'; }catch(e){ return false; } })();
+function toggleStaffMenu(){
+  staffMenuOpen=!staffMenuOpen;
+  try{ localStorage.setItem('aibuddy-portal:ui:staffMenu',staffMenuOpen?'open':'closed'); }catch(e){}
+  buildSidebarStaff();
+}
+function staffFilterLabel(){
+  if(activeStaff==='all') return '全員';
+  if(typeof activeStaff==='string' && activeStaff.startsWith('team:')) return (TEAMS[activeStaff.slice(5)]||{}).short||'';
+  return (STAFF[activeStaff]||{}).short||'';
+}
 function buildSidebarStaff(){
   const wrap=document.getElementById('sidebarStaff');
-  wrap.innerHTML=`<div class="sidebar-staff-label" style="display:flex;align-items:center;justify-content:space-between;">
-      担当者・チーム
-      <button onclick="openStaffModal()" style="background:rgba(255,255,255,.12);border:none;color:rgba(255,255,255,.7);border-radius:5px;width:20px;height:20px;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;flex-shrink:0;" title="担当者を追加">+</button>
-    </div>
-    <button class="staff-chip${activeStaff==='all'?' active':''}" id="ssc-all" onclick="setStaff('all')">
+  wrap.classList.toggle('ss-open',staffMenuOpen);
+  const body=`<button class="staff-chip${activeStaff==='all'?' active':''}" id="ssc-all" onclick="setStaff('all')">
       <div class="staff-avatar" style="background:#6B7280;">全</div>全員表示
     </button>`+
     Object.entries(TEAMS).map(([k,t])=>{
@@ -1680,6 +1692,13 @@ function buildSidebarStaff(){
       <button onclick="deleteStaff(${i})" title="削除" style="background:none;border:none;color:rgba(255,255,255,.3);cursor:pointer;padding:2px 4px;font-size:12px;border-radius:4px;flex-shrink:0;" onmouseover="this.style.color='rgba(255,100,100,.8)'" onmouseout="this.style.color='rgba(255,255,255,.3)'">✕</button>
     </div>`).join(''):'<div class="team-empty">メンバーなし</div>');
     }).join('');
+  wrap.innerHTML=`<div class="ss-head">
+      <button class="ss-toggle" onclick="toggleStaffMenu()" aria-expanded="${staffMenuOpen}" title="${staffMenuOpen?'たたむ':'ひらく'}">
+        <svg class="ss-chev" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 1.5 7 5 3 8.5"/></svg>担当者・チーム<span class="ss-now">${staffFilterLabel()}</span>
+      </button>
+      <button class="ss-add" onclick="openStaffModal()" title="担当者を追加">+</button>
+    </div>
+    <div class="ss-body">${body}</div>`;
 }
 
 // ── PAGE SWITCH ── //
