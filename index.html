@@ -2672,6 +2672,12 @@ const PRODUCTS={standard:{label:'スタンダード',monthly:true},light:{label:
 let editDealId=null;
 // 商談の評価額：月額商材は12ヶ月分で換算
 function dealValue(d){return PRODUCTS[d.product]?.monthly?(d.amount||0)*12:(d.amount||0);}
+// 未受注の商談（営業管理）の合計。確度（HOT/WARM/COOL）は掛けない＝最大の見込み金額。月額商材は月額、プロジェクト・研修は一括
+function dealsPotential(list){
+  const m=list.filter(d=>PRODUCTS[d.product]?.monthly), o=list.filter(d=>!PRODUCTS[d.product]?.monthly);
+  const byTemp=Object.fromEntries(Object.keys(TEMPS).map(k=>[k,m.filter(d=>d.temp===k).reduce((s,d)=>s+(d.amount||0),0)]));
+  return {monthly:m.reduce((s,d)=>s+(d.amount||0),0),monthlyN:m.length,oneTime:o.reduce((s,d)=>s+(d.amount||0),0),oneN:o.length,byTemp};
+}
 function dealAmountLabel(d){return PRODUCTS[d.product]?.monthly?`${fmt(d.amount||0)}/月`:fmt(d.amount||0);}
 
 function renderPipeline(){
@@ -2726,6 +2732,7 @@ function renderPipeline(){
 
   <div class="kpi-grid" style="margin-bottom:16px;">
     <div class="kpi-card blue"><div class="kpi-label">進行中の商談</div><div class="kpi-value">${open.length}<span style="font-size:12px;">件</span></div><div class="kpi-diff">総額（年額） ${fmt(open.reduce((s,d)=>s+dealValue(d),0))}</div></div>
+    ${(()=>{const pt=dealsPotential(open);return `<div class="kpi-card amber"><div class="kpi-label">未受注の見込み（最大・月額）</div><div class="kpi-value">${fmt(pt.monthly)}<span style="font-size:12px;">/月</span></div><div class="kpi-diff">HOT ${olMan(pt.byTemp.hot)} ／ WARM ${olMan(pt.byTemp.warm)} ／ COOL ${olMan(pt.byTemp.cool)}${pt.oneN?`<br>＋一括（プロジェクト・研修）${pt.oneN}件 ${fmt(pt.oneTime)}`:''}</div></div>`;})()}
     <div class="kpi-card purple"><div class="kpi-label">加重見込み金額（年額）</div><div class="kpi-value">${fmt(Math.round(weighted))}</div><div class="kpi-diff">月額商材は×12 · HOT70% / WARM40% / COOL10%</div></div>
     <div class="kpi-card green"><div class="kpi-label">今月の受注</div><div class="kpi-value">${wonM.length}<span style="font-size:12px;">件</span></div><div class="kpi-diff">${fmt(wonM.reduce((s,d)=>s+dealValue(d),0))}（年額換算）</div></div>
     <div class="kpi-card amber"><div class="kpi-label">受注率</div><div class="kpi-value">${won+lost?Math.round(won/(won+lost)*100):0}<span style="font-size:12px;">%</span></div><div class="kpi-diff">受注 ${won} / 失注 ${lost}</div></div>
@@ -3215,6 +3222,20 @@ function renderOutlook(){
     <div class="obj-badges"><span class="pill green">確定 ${fmt(confirmedSum)}/月</span><span class="pill amber">見込み案件 ${fmt(prosSum)}/月</span></div>
   </div>
   ${flash}${olDueBanner()}${importPanel}
+  ${(()=>{
+    const pt=dealsPotential(deals.filter(d=>d.status==='open')), pr=O.prospects.reduce((a,x)=>a+x.amount,0), total=pr+pt.monthly;
+    return `<div class="card" style="margin-bottom:16px;border-top:4px solid #F59E0B;">
+      <div class="card-header"><span class="card-title">未受注の見込み（最大）</span><span class="note" style="font-size:11px;color:var(--fg3);">確度を掛けない、決まっていない案件の月額合計</span></div>
+      <div class="card-body" style="display:flex;flex-wrap:wrap;gap:18px 32px;align-items:flex-end;">
+        <div><div style="font-size:11px;color:var(--fg3);margin-bottom:2px;">合計（月額）</div><div style="font-size:26px;font-weight:800;font-family:var(--mono);">${fmt(total)}<span style="font-size:12px;font-weight:600;">/月</span></div><div style="font-size:10.5px;color:var(--fg4);">年額換算 ${fmt(total*12)}</div></div>
+        <div style="font-size:12px;line-height:1.9;color:var(--fg2);">
+          <div>売上見通しの見込み案件　<b style="font-family:var(--mono);">${fmt(pr)}</b>/月（${O.prospects.length}件）</div>
+          <div>営業管理の未受注の商談　<b style="font-family:var(--mono);">${fmt(pt.monthly)}</b>/月（月額商材 ${pt.monthlyN}件）${pt.oneN?`<span style="color:var(--fg3);">　＋一括 ${pt.oneN}件 ${fmt(pt.oneTime)}</span>`:''}</div>
+        </div>
+      </div>
+      <div style="padding:0 18px 12px;font-size:10.5px;color:var(--fg4);line-height:1.7;">※ 同じ案件を、見込み案件と営業管理の商談の両方に入れていると、二重に数えます。重なる案件は、どちらか一方だけにしてください。</div>
+    </div>`;
+  })()}
 
   <div class="card" style="margin-bottom:16px;">
     <div class="card-header"><span class="card-title">シミュレーション条件</span><span class="note" style="font-size:11px;color:var(--fg3);">数字を変えると、下のグラフと表がすぐに変わります</span></div>
